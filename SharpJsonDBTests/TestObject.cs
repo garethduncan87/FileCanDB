@@ -8,12 +8,12 @@ namespace SharpJsonDBTests
 {
     class TestObject
     {
-        public TestObject()
+        public TestObject(string Content, DateTime Created, string Description, string Title)
         {
-            this.Content = "Hello world";
-            this.Created = DateTime.Now;
-            this.Description = "An article about Hello world";
-            this.Title = "This is Hello World";
+            this.Content = Content;
+            this.Created = Created;
+            this.Description = Description;
+            this.Title = Title;
         }
 
         public string Title { get; set; }

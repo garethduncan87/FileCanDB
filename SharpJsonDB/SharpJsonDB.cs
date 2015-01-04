@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,36 +25,40 @@ namespace SharpJsonDB
         /// <returns>Automated Id of newly inserted object</returns>
         public string InsertObject<T>(T OnjectData, string DatabaseId, string CollectionId)
         {
-            //Max nunber of files in folder = 1000
-            //So count number of files in folder, and if 1000 create new folder and start there
-
-            string FileName = DateTime.Now.Ticks.ToString();
+            //Create file name. Use datetime tick so easier to sort files by time created, then append guid to prevent any duplicates
+            string FileName = DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             string DirectoryBlockPath;
             string FilePath;
-            //Does Directory exist? If not create it
 
-            
-            //Does directory contain child directories (blocks)?
-            //If so, findest highest number named directory 
-            //and insert in there if the total of files in that directory is less than 1000
-                
-            IList<string> BlockNames = Directory.EnumerateDirectories(DirectoryPath).ToList();
-            int DirectoryBlockCount = BlockNames.Count();
+            //Does Directory for collection exist?
+            if (!Directory.Exists(DirectoryPath))
+            {
+                Directory.CreateDirectory(DirectoryPath + "\\1");
+            }
+
+            //Count number of blocks in a collection. If 0, then create a directory named '1'
+            int DirectoryBlockCount = Directory.EnumerateDirectories(DirectoryPath).Count();
             if (DirectoryBlockCount == 0)
             {
-                DirectoryBlockPath = DirectoryPath + "\\1";
-                Directory.CreateDirectory(DirectoryBlockPath);
+                Directory.CreateDirectory(DirectoryPath + "\\1");
             }
             
+            //Get latest number value in folder
+            //Get all directory paths, split path name after last \\
+            //Then convert list to an int
+            //Finally select the maximum value
+            var LatestBlockNumber = Directory.EnumerateDirectories(DirectoryPath).Select(m => m.Split('\\').Last()).Select(int.Parse).Max();
 
-            //Find highest value block name in directory
-            //listofIDs.Select(int.Parse).ToList()
-            IList<int> BlockNumbers = BlockNames.Select(int.Parse).ToList();
-            int LatestBlock = BlockNumbers.Max();
-            DirectoryBlockPath = DirectoryPath + "\\" + LatestBlock.ToString();
-            //Check count in this directory
+            //Check count in this directory - if less than 10 thousand then create new block
+            DirectoryBlockPath = DirectoryPath + "\\" + LatestBlockNumber.ToString();
             int NumberOfFilesInBlock = Directory.EnumerateFiles(DirectoryBlockPath).Count();
+
+            if (NumberOfFilesInBlock >= 10)
+            {
+                DirectoryBlockPath = DirectoryPath + "\\" + (LatestBlockNumber + 1);
+                Directory.CreateDirectory(DirectoryBlockPath);
+            }
 
             FilePath = DirectoryBlockPath + "\\" + FileName + ".json";
 
@@ -76,21 +81,115 @@ namespace SharpJsonDB
 
         public bool DeleteObject(string ObjectId, string DatabaseId, string CollectionId)
         {
-            return true;
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            bool FileDeleted = false;
+            if (Directory.Exists(DirectoryPath))
+            {
+                IEnumerable<string> BlockPaths = Directory.EnumerateDirectories(DirectoryPath);
+                 //Flag. Parallel loop can't return bool but can break, so set flag to indicate file has been deleted.
+                Parallel.ForEach(BlockPaths, (BlockPath, state) =>
+                {
+                    //Possible file path as we are not sure what block the file is in
+                    string PossibleFilePath = BlockPath + "\\" + ObjectId + ".json";
+
+                    if (File.Exists(PossibleFilePath))
+                    {
+                        try
+                        {
+                            File.Delete(PossibleFilePath);
+                            //Check how many files left in directory. if 0, delete directory.
+                            int FileCount = Directory.EnumerateFiles(BlockPath).Count();
+                            FileDeleted = true;
+                            if (FileCount == 0)
+                            {
+                                Directory.Delete(BlockPath);
+                            }
+                            
+                            state.Break();
+                        }
+                        catch (Exception ex) {  }
+                    }
+                });
+            }
+            return FileDeleted;
         }
 
         public T SelectObject<T>(string ObjectId, string DatabaseId, string CollectionId)
         {
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            if (Directory.Exists(DirectoryPath))
+            {
+                IEnumerable<string> BlockPaths = Directory.EnumerateDirectories(DirectoryPath);
+                foreach (string BlockPath in BlockPaths)
+                {
+                    //Possible file path as we are not sure what block the file is in
+                    string PossibleFilePath = BlockPath + "\\" + ObjectId + ".json";
 
+                    if (File.Exists(PossibleFilePath))
+                    {
+                        try
+                        {
+                            using (StreamReader sr = new StreamReader(PossibleFilePath))
+                            {
+                                using (JsonReader reader = new JsonTextReader(sr))
+                                {
+                                    JsonSerializer serializer = new JsonSerializer();
+                                    var result = serializer.Deserialize<T>(reader);
+                                    return result;
+                                }
+                            }
+                        }
+                        catch (Exception ex) { throw ex; }
+                    }
+                }
+            }
             return default(T);
         }
 
-        public List<T> SelectObjects<T>( string DatabaseId, string CollectionId, int Skip, int Take)
+        /// <summary>
+        /// Selects all objects (with skip and take taken into consideration) in a collection.
+        /// Returns a JObject as it maybe possible that a collection may hold different types of files.
+        /// </summary>
+        /// <param name="DatabaseId"></param>
+        /// <param name="CollectionId"></param>
+        /// <param name="Skip"></param>
+        /// <param name="Take"></param>
+        /// <returns></returns>
+        public List<JObject> SelectObjects(string DatabaseId, string CollectionId, out int TotalFiles, int Skip = 0, int Take = 0)
         {
-            List<T> Results = null;
-            return Results;
-        }
-        
+            //how to convert jobject to object - Album album = jalbum.ToObject<Album>();
 
+            List<JObject> Objects = new List<JObject>();
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            TotalFiles = 0;
+            if (Directory.Exists(DirectoryPath))
+            {
+                IEnumerable<string> Files;
+                Files = Directory.EnumerateFiles(DirectoryPath, "*", SearchOption.AllDirectories).OrderBy(m => m);
+                TotalFiles = Files.Count();
+                if (Skip != 0 && Take != 0)
+                {
+                    Files = Files.Skip(Skip).Take(Take);
+                }
+
+                Parallel.ForEach(Files, currentFile =>
+                {
+                    using (StreamReader sr = new StreamReader(currentFile))
+                    {
+                        using (JsonReader reader = new JsonTextReader(sr))
+                        {
+                            JsonSerializer serializer = new JsonSerializer();
+
+                            //Deserialize jsonfile to JObject
+                            JObject obj = serializer.Deserialize<JObject>(reader);
+
+                            //Add JObject to list
+                            Objects.Add(obj);
+                        }
+                    }
+                }); 
+            }
+            return Objects;
+        }
     }
 }
