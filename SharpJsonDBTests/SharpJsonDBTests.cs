@@ -9,12 +9,18 @@ namespace SharpJsonDBTests
     [TestClass]
     public class SharpJsonDBTests
     {
+        public SharpJsonDB.StorageMethod ChosenStorage;
+        public SharpJsonDBTests()
+        {
+            this.ChosenStorage = SharpJsonDB.StorageMethod.Encrypted;
+        }
+
         [TestMethod]
         public void InsertObjectTest()
         {
             TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
 
-            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb");
+            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb", ChosenStorage);
 
             string EntryId = MySharpJsonDB.InsertObject(MyTestObject, "Blog", "GarethsBlog");
             if (string.IsNullOrEmpty(EntryId))
@@ -26,7 +32,7 @@ namespace SharpJsonDBTests
         [TestMethod]
         public void SelectObjectsTest()
         {
-            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb");
+            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb", ChosenStorage);
             List<string> CreatedFileIds = new List<string>();
             int n = 100;
             Parallel.For(0, n, i =>
@@ -62,7 +68,7 @@ namespace SharpJsonDBTests
         public void SelectObjectTest()
         {
             //Craete file first
-            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb");
+            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb", ChosenStorage);
             TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test" );
             string EntryId = MySharpJsonDB.InsertObject(MyTestObject, "Blog", "GarethsBlog");
             if (string.IsNullOrEmpty(EntryId))
@@ -88,7 +94,7 @@ namespace SharpJsonDBTests
         [TestMethod]
         public void DeleteObjectTest()
         {
-            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb");
+            SharpJsonDB.SharpJsonDB MySharpJsonDB = new SharpJsonDB.SharpJsonDB(@"c:\sharpjsondb", ChosenStorage);
             //Create file first
             TestObject MyTestObject = new TestObject("delete option test", DateTime.Now, "delete option test " + Guid.NewGuid().ToString("N"), "delete option test");
             string EntryId = MySharpJsonDB.InsertObject(MyTestObject, "Blog", "GarethsBlog");

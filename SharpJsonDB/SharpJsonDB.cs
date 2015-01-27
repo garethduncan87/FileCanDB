@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -9,21 +10,31 @@ using System.Threading.Tasks;
 
 namespace SharpJsonDB
 {
+    public enum StorageMethod
+    {
+        Json,
+        Bson,
+        Encrypted
+    };
+
     public class SharpJsonDB
     {
         private string DbPath;
-        public SharpJsonDB(string DatabaseStorePath)
+        private StorageMethod ChosenStorageMethod;
+
+        public SharpJsonDB(string DatabaseStorePath, StorageMethod StorageMethodValue)
         {
             this.DbPath = DatabaseStorePath;
+            this.ChosenStorageMethod = StorageMethodValue;
         }
 
         /// <summary>
         /// Inserts object into collection
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="OnjectData"></param>
+        /// <param name="ObjectData"></param>
         /// <returns>Automated Id of newly inserted object</returns>
-        public string InsertObject<T>(T OnjectData, string DatabaseId, string CollectionId)
+        public string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId)
         {
             //Create file name. Use datetime tick so easier to sort files by time created, then append guid to prevent any duplicates
             string FileName = DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
@@ -63,14 +74,75 @@ namespace SharpJsonDB
             FilePath = DirectoryBlockPath + "\\" + FileName + ".json";
 
             //Serialise object using Json.net
+            if (ChosenStorageMethod == StorageMethod.Encrypted)
+            {
+                SerializeWriteEncryptedBson<T>(ObjectData, FilePath);
+            }
+            else if (ChosenStorageMethod == StorageMethod.Json)
+            {
+                SerializeWriteJson<T>(ObjectData, FilePath);
+            }
+            else
+            {
+                //Store as BSON
+                SerializeWriteBson<T>(ObjectData, FilePath);
+            }
+
+            return FileName;
+        }
+
+        private void SerializeWriteEncryptedBson<T>(T ObjectData, string FilePath)
+        {
+            using (MemoryStream ms = new MemoryStream())
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                // serialize product to BSON
+                using (BsonWriter writer = new BsonWriter(ms))
+                {
+                    serializer.Serialize(writer, ObjectData);
+                    using (var fileStream = new FileStream(FilePath, FileMode.CreateNew, FileAccess.ReadWrite))
+                    {
+                        ms.Position = 0;
+
+                        byte[] EncryptedData = Encryption.AES_Encrypt(ms.ToArray(), Encoding.UTF8.GetBytes(FilePath));
+
+                        using (MemoryStream ems = new MemoryStream())
+                        {
+                            ems.Read(EncryptedData, 0, EncryptedData.Length);
+                            ems.WriteTo(fileStream);
+                        }
+                    }
+                }
+            }  
+        }
+
+        private void SerializeWriteBson<T>(T ObjectData, string FilePath)
+        {
+            using(MemoryStream ms = new MemoryStream())
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                // serialize product to BSON
+                using(BsonWriter writer = new BsonWriter(ms))
+                {
+                    serializer.Serialize(writer, ObjectData);
+                    using (var fileStream = new FileStream(FilePath, FileMode.CreateNew, FileAccess.ReadWrite))
+                    {
+                        ms.Position = 0;
+                        ms.WriteTo(fileStream); // fileStream is not populated
+                    }
+                }
+            }   
+        }
+
+        private void SerializeWriteJson<T>(T ObjectData, string FilePath)
+        {
             try
             {
                 JsonSerializer serializer = new JsonSerializer();
                 using (StreamWriter sw = new StreamWriter(FilePath))
                 using (JsonWriter writer = new JsonTextWriter(sw))
                 {
-                    serializer.Serialize(writer, OnjectData);
-                    return FileName;
+                    serializer.Serialize(writer, ObjectData);
                 }
             }
             catch (Exception ex)
