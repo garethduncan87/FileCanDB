@@ -16,7 +16,6 @@ namespace Duncan.FileCanDB.Tests
             this.Title = Title;
         }
 
-
         public string Title { get; set; }
         public string Description { get; set; }
         public DateTime Created { get; set; }
