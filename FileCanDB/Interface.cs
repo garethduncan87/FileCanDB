@@ -31,6 +31,14 @@ namespace Duncan.FileCanDB
         /// <returns>Object stored in database</returns>
         T GetObject<T>(string ObjectId, string DatabaseId, string CollectionId, string Password = "");
 
+        /// <summary>
+        /// Retrieves all objects in a collection in a database
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="DatabaseId"></param>
+        /// <param name="CollectionId"></param>
+        /// <param name="Password"></param>
+        /// <returns></returns>
         IList<T> GetObjects<T>(string DatabaseId, string CollectionId, string Password = "");
     }
 }

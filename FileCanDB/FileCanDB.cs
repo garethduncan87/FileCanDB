@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace Duncan.FileCanDB
 {
     public enum StorageMethod
@@ -131,8 +132,38 @@ namespace Duncan.FileCanDB
             return FileName;
         }
 
+        public IEnumerable<string> ListObjects(string DatabaseId, string CollectionId, int skip, int take, string Password = "")
+        {
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            if (Directory.Exists(DirectoryPath))
+            {
+                return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Skip(skip).Take(take);
+            }
+            return null;
+        }
+
+        public long CollectionObjectsCount(string DatabaseId, string CollectionId)
+        {
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            if (Directory.Exists(DirectoryPath))
+            {
+                return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Count();
+            }
+            return 0;
+        }
+
+        public long DatabaseCollectionsCount(string DatabaseId)
+        {
+            string DirectoryPath = DbPath + "\\" + DatabaseId;
+            if (Directory.Exists(DirectoryPath))
+            {
+                return Directory.GetDirectories(DirectoryPath).Count();
+            }
+            return 0;
+        }
+
         /// <summary>
-        /// Gets all objects in a databases collection. Optionl password parameter.
+        /// Gets all objects in a databases collection. Optionl password parameter. Parallel method.
         /// If password provided, only files with the same password will be returned.
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -140,26 +171,15 @@ namespace Duncan.FileCanDB
         /// <param name="CollectionId"></param>
         /// <param name="Password"></param>
         /// <returns></returns>
-        public IList<T> GetObjects<T>(string DatabaseId, string CollectionId, string Password = "")
+        public IList<T> GetObjects<T>(string DatabaseId, string CollectionId, int skip, int take, string Password = "")
         {
+            IEnumerable<string> ObjectIds = ListObjects(DatabaseId, CollectionId, skip, take, Password);
             IList<T> Objects = new List<T>();
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
-            if (Directory.Exists(DirectoryPath))
+            Parallel.ForEach(ObjectIds, ObjectId =>
             {
-                IEnumerable<string> BlockPaths = Directory.EnumerateDirectories(DirectoryPath);
-                IList<string> AllFilePaths = new List<string>();
-
-
-                AllFilePaths = Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, System.IO.SearchOption.AllDirectories);
-
-                foreach (string file in AllFilePaths)
-                {
-                    string ObjectId = Path.GetFileNameWithoutExtension(file);
-                    var result = GetObject<T>(ObjectId, "Blog", "GarethsBlog", Password);
-                    Objects.Add(result);
-                }
-  
-            }
+                var Object = GetObject<T>(ObjectId, DatabaseId, CollectionId, Password);
+                Objects.Add(Object);
+            });
             return Objects;
         }
 
@@ -263,6 +283,17 @@ namespace Duncan.FileCanDB
                 });
             }
             return FileDeleted;
+        }
+
+        /// <summary>
+        /// Returns a list of Collection names found in a database
+        /// </summary>
+        /// <param name="DatabaseId"></param>
+        /// <returns>An IList of string</returns>
+        public IList<string> GetCollections(string DatabaseId)
+        {
+            string DirectoryPath = DbPath + "\\" + DatabaseId;
+            return Directory.GetDirectories(DirectoryPath).ToList();
         }
 
         /// <summary>
