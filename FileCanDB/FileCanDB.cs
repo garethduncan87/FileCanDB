@@ -17,34 +17,6 @@ namespace Duncan.FileCanDB
         encrypted
     };
 
-    public static class LINQExtension
-    {
-        public static double Median(this IEnumerable<double> source, int number2)
-        {
-            if (source.Count() == 0)
-            {
-                throw new InvalidOperationException("Cannot compute median for an empty set.");
-            }
-
-            var sortedList = from number in source
-                             orderby number
-                             select number;
-
-            int itemIndex = (int)sortedList.Count() / 2;
-
-            if (sortedList.Count() % 2 == 0)
-            {
-                // Even number of items. 
-                return (sortedList.ElementAt(itemIndex) + sortedList.ElementAt(itemIndex - 1)) / 2;
-            }
-            else
-            {
-                // Odd number of items. 
-                return sortedList.ElementAt(itemIndex);
-            }
-        }
-    }
-
     public class FileCanDB : IFileCanDB
     {
         private const string EncryptedDetailsFileExtension = ".details";
@@ -65,13 +37,6 @@ namespace Duncan.FileCanDB
         /// <returns>Returns an ID of the newly inserted object into the database</returns>
         public string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId, string Password = "")
         {
-
-            double[] numbers1 = { 1.9, 2, 8, 4, 5.7, 6, 7.2, 0 };
-
-            var query1 = numbers1.Median(2);
-
-
-
             //Check if password was provided.
             if (!string.IsNullOrEmpty(Password))
             {
@@ -107,7 +72,7 @@ namespace Duncan.FileCanDB
             DirectoryBlockPath = DirectoryPath + "\\" + LatestBlockNumber.ToString();
             int NumberOfFilesInBlock = Directory.EnumerateFiles(DirectoryBlockPath).Count();
 
-            if (NumberOfFilesInBlock >= 10)
+            if (NumberOfFilesInBlock >= 1000)
             {
                 DirectoryBlockPath = DirectoryPath + "\\" + (LatestBlockNumber + 1);
                 Directory.CreateDirectory(DirectoryBlockPath);
