@@ -34,11 +34,18 @@ namespace Duncan.FileCanDB
         /// <summary>
         /// Retrieves all objects in a collection in a database
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="DatabaseId"></param>
-        /// <param name="CollectionId"></param>
-        /// <param name="Password"></param>
+        /// <typeparam name="T">Object type</typeparam>
+        /// <param name="DatabaseId">Database Id</param>
+        /// <param name="CollectionId">Collection Id</param>
+        /// <param name="Password">Optional password parametert to enable encryption</param>
         /// <returns></returns>
-        IList<T> GetObjects<T>(string DatabaseId, string CollectionId, string Password = "");
+        IList<T> GetObjects<T>(string DatabaseId, string CollectionId, int skip, int take, string Password = "");
+
+        bool DeleteDatabase(string DatabaseId);
+        bool DeleteCollection(string DatabaseId, string CollectionId);
+        IList<string> GetCollections(string DatabaseId);
+        long DatabaseCollectionsCount(string DatabaseId);
+        long CollectionObjectsCount(string DatabaseId, string CollectionId);
+        IEnumerable<string> ListObjects(string DatabaseId, string CollectionId, int skip, int take, string Password = "");
     }
 }

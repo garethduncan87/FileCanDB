@@ -52,7 +52,7 @@ namespace Duncan.FileCanDB.Tests
                 }
             }
 
-            var results = MySharpFileDB.GetObjects<TestObject>("Blog", "GarethsBlog", Password);
+            var results = MySharpFileDB.GetObjects<TestObject>("Blog", "GarethsBlog", 0, 100, Password);
 
             if (results.Count >= EntryIds.Count)
             {
