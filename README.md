@@ -1,13 +1,38 @@
-SharpJsonDB
+FileCanDB
 ===========
-A flat file database.
+A flat file system allowing you to quickly store any object as a file in a database.
 
-In the same way you add data to rows in tables you will be able to...
-- Add any object to a collections
-- A datbase can store many collections
+Object > Collection > Database
+Database can hold many collections. A collection can hold many objects.
+NB A collection splits objects into sub directories with a max count of 1000 files in each.
 
-Think of an object as a row, a collection as a table, and a database as.. well you know that!
+Insert an object
+----------------
+IFileCanDB MyFileCanDB = new FileCanDB(@"c:\MyDatabaseDirectory", StorageMethod.encrypted);
+BlogEntry MyBlogEntry = GetBlogEntry(BlogEntryId);
+string EntryId = MySharpFileDB.InsertObject(MyBlogEntry, "BlogDatabase", "GarethsBlogCollection", "Password12345");
 
-The aim of this project is to create a very simple data store solution that could possibly be used in a CMS.
+Get objects in database
+-----------------------
+int skip = 0;
+int take = 100;
+IEnumerable<string> ListObjects("BlogDatabase", "GarethsBlogCollection", skip, take, "Password12345");
 
-Indexing...... possibly......
+Get an object
+-------------
+BlogEntry MyBlogEntry = GetObject<BlogEntry>(EntryId, "BlogDatabase", "GarethsBlogCollection", "Password12345");
+
+Delete an object
+----------------
+bool deleted = false;
+if(DeleteObject(EntryId, "BlogDatabase", "GarethsBlogCollection"))
+{
+  deleted = true;
+}
+
+Other current available methods
+-------------------------------
+GetCollections
+DeleteCollection
+DeleteDatabase
+GetObjects (Returns multiple objects in memory)
