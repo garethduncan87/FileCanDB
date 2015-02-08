@@ -44,7 +44,11 @@ namespace Duncan.FileCanDB.Tests
             {
                 
                 TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test");
-                string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password);
+                List<string> Keywords = new List<string>();
+                Keywords.Add("Programming");
+                Keywords.Add("Coding");
+                Keywords.Add("Generics");
+                string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password, Keywords);
                 EntryIds.Add(EntryId);
                 if (string.IsNullOrEmpty(EntryId))
                 {
@@ -84,7 +88,11 @@ namespace Duncan.FileCanDB.Tests
             //Craete file first
             IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage);
             TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test" );
-            string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password);
+            List<string> Keywords = new List<string>();
+            Keywords.Add("Programming");
+            Keywords.Add("Coding");
+            Keywords.Add("Generics");
+            string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password, Keywords);
             if (string.IsNullOrEmpty(EntryId))
             {
                 Assert.Fail("No ID returned for newly inserted object");

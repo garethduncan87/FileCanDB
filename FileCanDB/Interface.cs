@@ -9,7 +9,7 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of object to store in the database</typeparam>
         /// <param name="ObjectData">The object to store in the database</param>
         /// <returns>Returns an ID of the newly inserted object into the database</returns>
-        string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId, string Password = "");
+        string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null);
 
         /// <summary>
         /// Deletes an object from the database
