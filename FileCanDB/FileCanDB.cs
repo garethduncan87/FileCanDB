@@ -121,7 +121,7 @@ namespace Duncan.FileCanDB
             using (var sw = new StreamWriter(tempFile))
             {
                 string line;
-
+                bool indexadded = false;
                 while ((line = sr.ReadLine()) != null)
                 {
 
@@ -142,12 +142,27 @@ namespace Duncan.FileCanDB
                             objectIdsList.Add(ObjectId);
                             sw.WriteLine(keyword + " " + string.Join(",", new List<string>(objectIdsList).ToArray()));
                         }
+                        indexadded = true;
                     }
                     else
                     {
                         sw.WriteLine(line);
                     }
                 }
+
+
+                if(sr.ReadLine() != null || indexadded == false)
+                {
+                    //file is empty so add to index
+                    //for each keyword add record
+                    foreach (string keyword in KeyWords)
+                    {
+                        sw.WriteLine(keyword + " " + ObjectId);
+                    }
+                    
+                }
+
+
             }
 
             File.Delete(IndexPath);
@@ -172,7 +187,11 @@ namespace Duncan.FileCanDB
                         string objectIds = line.Split(' ')[1];
                         List<string> objectIdsList = objectIds.Split(',').ToList();
                         objectIdsList.Remove(ObjectId);
-                        sw.WriteLine(keyword + " " + string.Join(",", new List<string>(objectIdsList).ToArray()));
+
+                        if (objectIdsList.Count > 0)
+                        {
+                            sw.WriteLine(keyword + " " + string.Join(",", new List<string>(objectIdsList).ToArray()));
+                        } 
                     }
                     else
                     {
