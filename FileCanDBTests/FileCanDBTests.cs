@@ -68,7 +68,13 @@ namespace Duncan.FileCanDB.Tests
             }
             //Get all objects
             
+            //Find ojects
+            IList<string> FindObjects = MySharpFileDB.FindObjects("programming generics", "Blog", "GarethsBlog", 0, 100);
 
+            if(FindObjects.Count == 0)
+            {
+                Assert.Fail("No records found");
+            }
 
             foreach (string EntryId in EntryIds)
             {

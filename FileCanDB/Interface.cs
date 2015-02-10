@@ -47,5 +47,6 @@ namespace Duncan.FileCanDB
         long DatabaseCollectionsCount(string DatabaseId);
         long CollectionObjectsCount(string DatabaseId, string CollectionId);
         IEnumerable<string> ListObjects(string DatabaseId, string CollectionId, int skip, int take, string Password = "");
+        IList<string> FindObjects(string query, string DatabaseId, string CollectionId, int skip, int take);
     }
 }

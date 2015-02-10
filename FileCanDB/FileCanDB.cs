@@ -177,7 +177,6 @@ namespace Duncan.FileCanDB
             using (var sw = new StreamWriter(tempFile))
             {
                 string line;
-
                 while ((line = sr.ReadLine()) != null)
                 {
                     if (line.Contains(ObjectId))
@@ -202,6 +201,42 @@ namespace Duncan.FileCanDB
 
             File.Delete(IndexPath);
             File.Move(tempFile, IndexPath);
+        }
+
+        public IList<string> FindObjects(string query, string DatabaseId, string CollectionId, int skip, int take)
+        {
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            string IndexPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId + "\\index.txt";
+
+            List<string> searchwords = query.Split(' ').ToList();
+
+            List<string> ObjectIdsFound = new List<string>();
+
+            string line;
+
+            using (var sr = new StreamReader(IndexPath))
+            {
+                while ((line = sr.ReadLine()) != null)
+                {
+
+                    foreach (string word in searchwords)
+                    {
+                        //keyword in index file
+                        string keyword = line.Split(' ')[0];
+                        if (keyword.ToLower().Contains(word.ToLower()))
+                        {
+                            //return list of object ids
+                            string objectIds = line.Split(' ')[1];
+                            List<string> objectIdsList = objectIds.Split(',').ToList();
+                            ObjectIdsFound.AddRange(objectIdsList);
+                            ObjectIdsFound = ObjectIdsFound.Distinct().ToList();
+                        }
+                    }
+
+                }
+            }
+                
+            return ObjectIdsFound;
         }
 
 
