@@ -21,12 +21,14 @@ namespace Duncan.FileCanDB
     {
         private const string EncryptedDetailsFileExtension = ".details";
         private string DbPath;
+        private bool EnableIndexing;
         private StorageMethod ChosenStorageMethod;
 
-        public FileCanDB(string DatabaseStorePath, StorageMethod StorageMethodValue)
+        public FileCanDB(string DatabaseStorePath, StorageMethod StorageMethodValue, bool EnableIndexing)
         {
             this.DbPath = DatabaseStorePath;
             this.ChosenStorageMethod = StorageMethodValue;
+            this.EnableIndexing = EnableIndexing;
         }
 
         /// <summary>
@@ -37,12 +39,6 @@ namespace Duncan.FileCanDB
         /// <returns>Returns an ID of the newly inserted object into the database</returns>
         public string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null)
         {
-            //Check if password was provided.
-            if (!string.IsNullOrEmpty(Password))
-            {
-                ChosenStorageMethod = StorageMethod.encrypted;
-            }
-
             //Create file name. Use datetime tick so easier to sort files by time created, then append guid to prevent any duplicates
             string FileName = DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
@@ -96,112 +92,17 @@ namespace Duncan.FileCanDB
             }
 
             //Index object
-            if (KeyWords != null)
+            if (KeyWords != null && EnableIndexing)
             {
-                IndexObject(FileName, DatabaseId, CollectionId, KeyWords);
+                Indexing.IndexObject(DbPath, FileName, DatabaseId, CollectionId, KeyWords);
             }
 
             return FileName;
         }
 
-        private void IndexObject(string ObjectId, string DatabaseId, string CollectionId, List<string> KeyWords)
-        {
-            string IndexPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId + "\\index.txt";
-
-            if(!File.Exists(IndexPath))
-            {
-                //create file
-                FileStream fs1 = new FileStream(IndexPath, FileMode.OpenOrCreate, FileAccess.Write);
-                StreamWriter writer = new StreamWriter(fs1);
-                writer.Close();
-            }
-
-            string tempFile = Path.GetTempFileName();
-            using (var sr = new StreamReader(IndexPath))
-            using (var sw = new StreamWriter(tempFile))
-            {
-                string line;
-                bool indexadded = false;
-                while ((line = sr.ReadLine()) != null)
-                {
-
-                    string keyword = line.Split (' ')[0];
-                    if(KeyWords.Contains(keyword))
-                    {
-                        //line found
-                        string objectIds = line.Split(' ')[1];
-                        List<string> objectIdsList = objectIds.Split(',').ToList();
-                        if (objectIdsList.Contains(ObjectId))
-                        {
-                            //Write line
-                            sw.WriteLine(line);
-                        }
-                        else
-                        {
-                            //Add to list
-                            objectIdsList.Add(ObjectId);
-                            sw.WriteLine(keyword + " " + string.Join(",", new List<string>(objectIdsList).ToArray()));
-                        }
-                        indexadded = true;
-                    }
-                    else
-                    {
-                        sw.WriteLine(line);
-                    }
-                }
 
 
-                if(sr.ReadLine() != null || indexadded == false)
-                {
-                    //file is empty so add to index
-                    //for each keyword add record
-                    foreach (string keyword in KeyWords)
-                    {
-                        sw.WriteLine(keyword + " " + ObjectId);
-                    }
-                    
-                }
 
-
-            }
-
-            File.Delete(IndexPath);
-            File.Move(tempFile, IndexPath);
-        }
-
-        private void DeleteObjectIndexRecord(string ObjectId, string DatabaseId, string CollectionId)
-        {
-            string IndexPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId + "\\index.txt";
-            string tempFile = Path.GetTempFileName();
-            using (var sr = new StreamReader(IndexPath))
-            using (var sw = new StreamWriter(tempFile))
-            {
-                string line;
-                while ((line = sr.ReadLine()) != null)
-                {
-                    if (line.Contains(ObjectId))
-                    {
-                        //Remove objectid from list and re create the line
-                        string keyword = line.Split(' ')[0];
-                        string objectIds = line.Split(' ')[1];
-                        List<string> objectIdsList = objectIds.Split(',').ToList();
-                        objectIdsList.Remove(ObjectId);
-
-                        if (objectIdsList.Count > 0)
-                        {
-                            sw.WriteLine(keyword + " " + string.Join(",", new List<string>(objectIdsList).ToArray()));
-                        } 
-                    }
-                    else
-                    {
-                        sw.WriteLine(line);
-                    }
-                }
-            }
-
-            File.Delete(IndexPath);
-            File.Move(tempFile, IndexPath);
-        }
 
         public IList<string> FindObjects(string query, string DatabaseId, string CollectionId, int skip, int take)
         {
@@ -239,8 +140,15 @@ namespace Duncan.FileCanDB
             return ObjectIdsFound;
         }
 
-
-        public IEnumerable<string> ListObjects(string DatabaseId, string CollectionId, int skip, int take, string Password = "")
+        /// <summary>
+        /// List all object ids in a collection
+        /// </summary>
+        /// <param name="DatabaseId"></param>
+        /// <param name="CollectionId"></param>
+        /// <param name="skip"></param>
+        /// <param name="take"></param>
+        /// <returns></returns>
+        public IEnumerable<string> ListObjects(string DatabaseId, string CollectionId, int skip, int take)
         {
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             if (Directory.Exists(DirectoryPath))
@@ -250,7 +158,7 @@ namespace Duncan.FileCanDB
             return null;
         }
 
-        public long CollectionObjectsCount(string DatabaseId, string CollectionId)
+        public int CollectionObjectsCount(string DatabaseId, string CollectionId)
         {
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             if (Directory.Exists(DirectoryPath))
@@ -260,7 +168,7 @@ namespace Duncan.FileCanDB
             return 0;
         }
 
-        public long DatabaseCollectionsCount(string DatabaseId)
+        public int DatabaseCollectionsCount(string DatabaseId)
         {
             string DirectoryPath = DbPath + "\\" + DatabaseId;
             if (Directory.Exists(DirectoryPath))
@@ -281,7 +189,7 @@ namespace Duncan.FileCanDB
         /// <returns></returns>
         public IList<T> GetObjects<T>(string DatabaseId, string CollectionId, int skip, int take, string Password = "")
         {
-            IEnumerable<string> ObjectIds = ListObjects(DatabaseId, CollectionId, skip, take, Password);
+            IEnumerable<string> ObjectIds = ListObjects(DatabaseId, CollectionId, skip, take);
             IList<T> Objects = new List<T>();
             Parallel.ForEach(ObjectIds, ObjectId =>
             {
@@ -302,12 +210,6 @@ namespace Duncan.FileCanDB
         /// <returns>Object stored in database</returns>
         public T GetObject<T>(string ObjectId, string DatabaseId, string CollectionId, string Password = "")
         {
-            //Check if password was provided.
-            if (!string.IsNullOrEmpty(Password))
-            {
-                ChosenStorageMethod = StorageMethod.encrypted;
-            }
-
             // deserialize product from BSON
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             if (Directory.Exists(DirectoryPath))
@@ -341,9 +243,6 @@ namespace Duncan.FileCanDB
             }
             return default(T);
         }
-
-
-
 
         /// <summary>
         /// Deletes an object from the database
@@ -380,8 +279,11 @@ namespace Duncan.FileCanDB
                         }
 
                         //Delete object from index file
-                        DeleteObjectIndexRecord(ObjectId, DatabaseId, CollectionId);
-
+                        if(EnableIndexing)
+                        {
+                            Indexing.DeleteObjectIndexRecord(DbPath, ObjectId, DatabaseId, CollectionId);
+                        }
+                        
                         //Check how many files left in directory. if 0, delete directory.
                         int FileCount = Directory.EnumerateFiles(BlockPath).Count();
                         if (FileCount == 0)

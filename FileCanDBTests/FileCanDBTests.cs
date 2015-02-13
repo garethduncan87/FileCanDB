@@ -11,10 +11,11 @@ namespace Duncan.FileCanDB.Tests
     {
         public StorageMethod ChosenStorage;
         public string Password;
+        bool EnableIndexing;
         public FileCanDBTests()
         {
             this.ChosenStorage = StorageMethod.encrypted;
-
+            this.EnableIndexing = true;
             Password = string.Empty;
             if (ChosenStorage == StorageMethod.encrypted)
             {
@@ -26,7 +27,7 @@ namespace Duncan.FileCanDB.Tests
         public void InsertObjectTest()
         {
             TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage);
+            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
             string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password);
             if (string.IsNullOrEmpty(EntryId))
             {
@@ -37,7 +38,7 @@ namespace Duncan.FileCanDB.Tests
         [TestMethod]
         public void SelectObjectsTest()
         {
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage);
+            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
             //Insert 10 files
             List<string> EntryIds = new List<string>();
             for (int i = 0; i < 10; i++)
@@ -92,7 +93,7 @@ namespace Duncan.FileCanDB.Tests
         {
 
             //Craete file first
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage);
+            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
             TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test" );
             List<string> Keywords = new List<string>();
             Keywords.Add("Programming");
@@ -122,7 +123,7 @@ namespace Duncan.FileCanDB.Tests
         [TestMethod]
         public void DeleteObjectTest()
         {
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage);
+            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
             //Create file first
             TestObject MyTestObject = new TestObject("delete option test", DateTime.Now, "delete option test " + Guid.NewGuid().ToString("N"), "delete option test");
             string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog");
