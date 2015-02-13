@@ -11,7 +11,6 @@ namespace Duncan.FileCanDB
         public static void IndexObject(string DbPath, string ObjectId, string DatabaseId, string CollectionId, List<string> KeyWords)
         {
             string IndexPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId + "\\index.txt";
-
             if (!File.Exists(IndexPath))
             {
                 //create file
@@ -54,7 +53,6 @@ namespace Duncan.FileCanDB
                     }
                 }
 
-
                 if (sr.ReadLine() != null || indexadded == false)
                 {
                     //file is empty so add to index
@@ -65,8 +63,6 @@ namespace Duncan.FileCanDB
                     }
 
                 }
-
-
             }
 
             File.Delete(IndexPath);
@@ -109,7 +105,7 @@ namespace Duncan.FileCanDB
             File.Delete(IndexPath);
 
             //recreate the new index file
-            if (File.ReadLines(IndexPath).Count() > 0)
+            if (File.ReadLines(tempFile).Count() > 0)
             {
                 File.Move(tempFile, IndexPath);
             }

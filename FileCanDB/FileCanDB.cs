@@ -40,7 +40,7 @@ namespace Duncan.FileCanDB
         public string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null)
         {
             //Create file name. Use datetime tick so easier to sort files by time created, then append guid to prevent any duplicates
-            string FileName = DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
+            
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             string DirectoryBlockPath;
             string FilePath;
@@ -62,8 +62,8 @@ namespace Duncan.FileCanDB
             //Get all directory paths, split path name after last \\
             //Then convert list to an int
             //Finally select the maximum value
-            var LatestBlockNumber = Directory.EnumerateDirectories(DirectoryPath).Select(m => m.Split('\\').Last()).Select(int.Parse).Max();
-
+            int LatestBlockNumber = Directory.EnumerateDirectories(DirectoryPath).Select(m => m.Split('\\').Last()).Select(int.Parse).Max();
+            string FileName = LatestBlockNumber + "_" + DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
             //Check count in this directory - if less than 10 thousand then create new block
             DirectoryBlockPath = DirectoryPath + "\\" + LatestBlockNumber.ToString();
             int NumberOfFilesInBlock = Directory.EnumerateFiles(DirectoryBlockPath).Count();
@@ -75,8 +75,9 @@ namespace Duncan.FileCanDB
                 Directory.CreateDirectory(DirectoryBlockPath);
             }
 
-
+            //Create file path. The first part of an objectid is the Block number the file is found in
             FilePath = DirectoryBlockPath + "\\" + FileName + "." + ChosenStorageMethod;
+
             //Serialise object using Json.net
             if (ChosenStorageMethod == StorageMethod.encrypted)
             {
@@ -100,7 +101,63 @@ namespace Duncan.FileCanDB
             return FileName;
         }
 
+        /// <summary>
+        /// Deletes an object from the database
+        /// </summary>
+        /// <param name="ObjectId">Object ID</param>
+        /// <param name="DatabaseId">Database ID</param>
+        /// <param name="CollectionId">Collection ID</param>
+        /// <returns>Returns true if file has been deleted</returns>
+        public bool DeleteObject(string ObjectId, string DatabaseId, string CollectionId)
+        {
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            bool FileDeleted = false;
+            if (Directory.Exists(DirectoryPath))
+            {
+                //Flag. Parallel loop can't return bool but can break, so set flag to indicate file has been deleted.
 
+                //First part of any object id is the block path
+                //This should speed up the process if getting an object
+                string BlockNumber = string.Empty;
+                int l = ObjectId.IndexOf("_");
+                if (l > 0)
+                {
+                    BlockNumber = ObjectId.Substring(0, l);
+                }
+
+                //Possible file path
+                string FilePath = DirectoryPath + "\\" + BlockNumber + "\\" + ObjectId + "." + ChosenStorageMethod;
+
+                if (File.Exists(FilePath))
+                {
+
+                    File.Delete(FilePath);
+                    if (!File.Exists(FilePath))
+                    {
+                        //Check if encrypted details file exist with it. If so, delete it
+                        if (File.Exists(FilePath + EncryptedDetailsFileExtension))
+                        {
+                            File.Delete(FilePath + EncryptedDetailsFileExtension);
+                        }
+                        FileDeleted = true;
+                    }
+
+                    //Delete object from index file
+                    if (EnableIndexing)
+                    {
+                        Indexing.DeleteObjectIndexRecord(DbPath, ObjectId, DatabaseId, CollectionId);
+                    }
+
+                    //Check how many files left in directory. if 0, delete directory.
+                    int FileCount = Directory.EnumerateFiles(DirectoryPath + "\\" + BlockNumber).Count();
+                    if (FileCount == 0)
+                    {
+                        Directory.Delete(DirectoryPath + "\\" + BlockNumber);
+                    }
+                }
+            }
+            return FileDeleted;
+        }
 
 
 
@@ -153,7 +210,7 @@ namespace Duncan.FileCanDB
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             if (Directory.Exists(DirectoryPath))
             {
-                return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Skip(skip).Take(take);
+                return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Skip(skip).Take(take).Select(x => Path.GetFileNameWithoutExtension(x));
             }
             return null;
         }
@@ -214,89 +271,43 @@ namespace Duncan.FileCanDB
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             if (Directory.Exists(DirectoryPath))
             {
-                IEnumerable<string> BlockPaths = Directory.EnumerateDirectories(DirectoryPath);
-                foreach (string BlockPath in BlockPaths)
+                //First part of any object id is the block path
+                //This should speed up the process if getting an object
+                string BlockNumber = string.Empty;
+                int l = ObjectId.IndexOf("_");
+                if (l > 0)
                 {
-                    //Possible file path as we are not sure what block the file is in
-                    string PossibleFilePath = BlockPath + "\\" + ObjectId + "." + ChosenStorageMethod;
+                    BlockNumber = ObjectId.Substring(0, l);
+                }
 
-                    //If File path exists
-                    if (File.Exists(PossibleFilePath))
+                //Possible file path
+                string FilePath = DirectoryPath + "\\" + BlockNumber + "\\" + ObjectId + "." + ChosenStorageMethod;
+
+                //If File path exists
+                if (File.Exists(FilePath))
+                {
+                    if (ChosenStorageMethod == StorageMethod.encrypted)
                     {
-                        if (ChosenStorageMethod == StorageMethod.encrypted)
-                        {
-                            //bson encrypted method
-                            return DeserializeFromFile.DeserializeFromFileBsonEncrypted<T>(PossibleFilePath, Password);
-                        }
-                        else if (ChosenStorageMethod == StorageMethod.bson)
-                        {
-                            //return bson
-                            return DeserializeFromFile.DeserializeFromFileBson<T>(PossibleFilePath);
-                        }
-                        else
-                        {
-                            //return json
-                            return DeserializeFromFile.DeserializeFromFileJson<T>(PossibleFilePath);
-                        }
+                        //bson encrypted method
+                        return DeserializeFromFile.DeserializeFromFileBsonEncrypted<T>(FilePath, Password);
+                    }
+                    else if (ChosenStorageMethod == StorageMethod.bson)
+                    {
+                        //return bson
+                        return DeserializeFromFile.DeserializeFromFileBson<T>(FilePath);
+                    }
+                    else
+                    {
+                        //return json
+                        return DeserializeFromFile.DeserializeFromFileJson<T>(FilePath);
                     }
                 }
+                
             }
             return default(T);
         }
 
-        /// <summary>
-        /// Deletes an object from the database
-        /// </summary>
-        /// <param name="ObjectId">Object ID</param>
-        /// <param name="DatabaseId">Database ID</param>
-        /// <param name="CollectionId">Collection ID</param>
-        /// <returns>Returns true if file has been deleted</returns>
-        public bool DeleteObject(string ObjectId, string DatabaseId, string CollectionId)
-        {
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
-            bool FileDeleted = false;
-            if (Directory.Exists(DirectoryPath))
-            {
-                IEnumerable<string> BlockPaths = Directory.EnumerateDirectories(DirectoryPath);
-                 //Flag. Parallel loop can't return bool but can break, so set flag to indicate file has been deleted.
-                Parallel.ForEach(BlockPaths, (BlockPath, state) =>
-                {
-                    //Possible file path as we are not sure what block the file is in
-                    string PossibleFilePath = BlockPath + "\\" + ObjectId + "." + ChosenStorageMethod;
 
-                    if (File.Exists(PossibleFilePath))
-                    {
-
-                        File.Delete(PossibleFilePath);
-                        if (!File.Exists(PossibleFilePath))
-                        {
-                            //Check if encrypted details file exist with it. If so, delete it
-                            if (File.Exists(PossibleFilePath + EncryptedDetailsFileExtension))
-                            {
-                                File.Delete(PossibleFilePath + EncryptedDetailsFileExtension);
-                            }
-                            FileDeleted = true;
-                        }
-
-                        //Delete object from index file
-                        if(EnableIndexing)
-                        {
-                            Indexing.DeleteObjectIndexRecord(DbPath, ObjectId, DatabaseId, CollectionId);
-                        }
-                        
-                        //Check how many files left in directory. if 0, delete directory.
-                        int FileCount = Directory.EnumerateFiles(BlockPath).Count();
-                        if (FileCount == 0)
-                        {
-                            Directory.Delete(BlockPath);
-                        }
-                            
-                        state.Break();    
-                    }
-                });
-            }
-            return FileDeleted;
-        }
 
         /// <summary>
         /// Returns a list of Collection names found in a database
