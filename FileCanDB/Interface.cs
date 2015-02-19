@@ -12,6 +12,19 @@ namespace Duncan.FileCanDB
         string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null);
 
         /// <summary>
+        /// Update an object in the database
+        /// </summary>
+        /// <typeparam name="T">Object type</typeparam>
+        /// <param name="ObjectId"></param>
+        /// <param name="ObjectData"></param>
+        /// <param name="DatabaseId"></param>
+        /// <param name="CollectionId"></param>
+        /// <param name="Password"></param>
+        /// <param name="KeyWords"></param>
+        /// <returns>bool: Returns true if the object is updated successfully</returns>
+        bool UpdateObject<T>(string ObjectId, T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null);
+
+        /// <summary>
         /// Deletes an object from the database
         /// </summary>
         /// <param name="ObjectId">Object ID</param>

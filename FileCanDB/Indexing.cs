@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Duncan.FileCanDB
 {
@@ -59,7 +60,7 @@ namespace Duncan.FileCanDB
                     //for each keyword add record
                     foreach (string keyword in KeyWords)
                     {
-                        sw.WriteLine(keyword + " " + ObjectId);
+                         sw.WriteLine(keyword + " " + ObjectId);
                     }
 
                 }
@@ -100,7 +101,7 @@ namespace Duncan.FileCanDB
                     }
                 }
             }
-
+            
             //Delete the original index file
             File.Delete(IndexPath);
 

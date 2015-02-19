@@ -101,6 +101,48 @@ namespace Duncan.FileCanDB
             return FileName;
         }
 
+        public bool UpdateObject<T>(string ObjectId, T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null)
+        {
+            // deserialize product from BSON
+            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            if (Directory.Exists(DirectoryPath))
+            {
+                //First part of any object id is the block path
+                //This should speed up the process if getting an object
+                string BlockNumber = string.Empty;
+                int l = ObjectId.IndexOf("_");
+                if (l > 0)
+                {
+                    BlockNumber = ObjectId.Substring(0, l);
+                }
+
+                //Possible file path
+                string FilePath = DirectoryPath + "\\" + BlockNumber + "\\" + ObjectId + "." + ChosenStorageMethod;
+
+                //If File path exists
+                if (File.Exists(FilePath))
+                {
+                    if (ChosenStorageMethod == StorageMethod.encrypted)
+                    {
+                        //bson encrypted method
+                        SerializeToFile.SerializeToFileEncryptedBson<T>(ObjectData, FilePath, Password);
+                    }
+                    else if (ChosenStorageMethod == StorageMethod.bson)
+                    {
+                        //return bson
+                        SerializeToFile.SerializeToFileBson<T>(ObjectData,FilePath);
+                    }
+                    else
+                    {
+                        //return json
+                        SerializeToFile.SerializeToFileJson<T>(ObjectData,FilePath);
+                    }
+                }
+
+            }
+            return true;
+        }
+
         /// <summary>
         /// Deletes an object from the database
         /// </summary>

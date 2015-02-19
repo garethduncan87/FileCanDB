@@ -59,6 +59,20 @@ namespace Duncan.FileCanDB.Tests
 
             var results = MySharpFileDB.GetObjects<TestObject>("Blog", "GarethsBlog", 0, 100, Password);
 
+            //Update files
+            foreach (var id in EntryIds)
+            {
+
+                TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test");
+                List<string> Keywords = new List<string>();
+                Keywords.Add("Programming");
+                Keywords.Add("Coding");
+                Keywords.Add("Generics");
+                MySharpFileDB.UpdateObject<TestObject>(id, MyTestObject, "Blog", "GarethsBlog", Password, Keywords);
+            }
+
+
+
             if (results.Count >= EntryIds.Count)
             {
                 

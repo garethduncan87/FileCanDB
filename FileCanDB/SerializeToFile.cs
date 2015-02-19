@@ -26,6 +26,15 @@ namespace Duncan.FileCanDB
                 using (BsonWriter writer = new BsonWriter(ms))
                 {
                     serializer.Serialize(writer, ObjectData);
+
+                    //If object exists move to delete as can't overwrite
+                    bool RequiredToDelete = false;
+                    if (File.Exists(FilePath))
+                    {
+                        File.Move(FilePath, FilePath + ".delete");
+                        RequiredToDelete = true;
+                    }
+
                     using (var fileStream = new FileStream(FilePath, FileMode.CreateNew, FileAccess.ReadWrite))
                     {
                         ms.Position = 0;
@@ -44,6 +53,12 @@ namespace Duncan.FileCanDB
                             ems.WriteTo(fileStream);
                         }
                     }
+
+                    //Finally delete old file
+                    if (RequiredToDelete)
+                    {
+                        File.Delete(FilePath + ".delete");
+                    }
                 }
             }
         }
@@ -57,11 +72,28 @@ namespace Duncan.FileCanDB
                 using (BsonWriter writer = new BsonWriter(ms))
                 {
                     serializer.Serialize(writer, ObjectData);
+                    
+                    //If object exists move to delete as can't overwrite
+                    bool RequiredToDelete = false;
+                    if(File.Exists(FilePath))
+                    {
+                        File.Move(FilePath, FilePath + ".delete");
+                        RequiredToDelete = true;
+                    }
+                   
                     using (var fileStream = new FileStream(FilePath, FileMode.CreateNew, FileAccess.ReadWrite))
                     {
+
                         ms.Position = 0;
                         ms.WriteTo(fileStream); // fileStream is not populated
                     }
+
+                    //Finally delete old file
+                    if (RequiredToDelete)
+                    {
+                        File.Delete(FilePath + ".delete");
+                    }
+                    
                 }
             }
         }
@@ -74,7 +106,21 @@ namespace Duncan.FileCanDB
                 using (StreamWriter sw = new StreamWriter(FilePath))
                 using (JsonWriter writer = new JsonTextWriter(sw))
                 {
+                    //Move file to delete as can't overwrite
+                    bool RequiredToDelete = false;
+                    if (File.Exists(FilePath))
+                    {
+                        File.Move(FilePath, FilePath + ".delete");
+                        RequiredToDelete = true;
+                    }
+                    
                     serializer.Serialize(writer, ObjectData);
+                    
+                    //Finally delete the old file
+                    if (RequiredToDelete)
+                    {
+                        File.Delete(FilePath + ".delete");
+                    }
                 }
             }
             catch (Exception ex)
