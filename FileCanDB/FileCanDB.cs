@@ -41,6 +41,7 @@ namespace Duncan.FileCanDB
         {
             //Create file name. Use datetime tick so easier to sort files by time created, then append guid to prevent any duplicates
             
+
             string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
             string DirectoryBlockPath;
             string FilePath;
