@@ -103,24 +103,26 @@ namespace Duncan.FileCanDB
             try
             {
                 JsonSerializer serializer = new JsonSerializer();
+                //Move file to delete as can't overwrite
+                bool RequiredToDelete = false;
+                if (File.Exists(FilePath))
+                {
+                    File.Move(FilePath, FilePath + ".delete");
+                    RequiredToDelete = true;
+                }
                 using (StreamWriter sw = new StreamWriter(FilePath))
                 using (JsonWriter writer = new JsonTextWriter(sw))
                 {
-                    //Move file to delete as can't overwrite
-                    bool RequiredToDelete = false;
-                    if (File.Exists(FilePath))
-                    {
-                        File.Move(FilePath, FilePath + ".delete");
-                        RequiredToDelete = true;
-                    }
+                    
                     
                     serializer.Serialize(writer, ObjectData);
                     
-                    //Finally delete the old file
-                    if (RequiredToDelete)
-                    {
-                        File.Delete(FilePath + ".delete");
-                    }
+                   
+                }
+                //Finally delete the old file
+                if (RequiredToDelete)
+                {
+                    File.Delete(FilePath + ".delete");
                 }
             }
             catch (Exception ex)

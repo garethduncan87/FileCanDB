@@ -213,26 +213,27 @@ namespace Duncan.FileCanDB
             List<string> ObjectIdsFound = new List<string>();
 
             string line;
-
-            using (var sr = new StreamReader(IndexPath))
+            if (File.Exists(IndexPath))
             {
-                while ((line = sr.ReadLine()) != null)
+                using (var sr = new StreamReader(IndexPath))
                 {
-
-                    foreach (string word in searchwords)
+                    while ((line = sr.ReadLine()) != null)
                     {
-                        //keyword in index file
-                        string keyword = line.Split(' ')[0];
-                        if (keyword.ToLower().Contains(word.ToLower()))
+
+                        foreach (string word in searchwords)
                         {
-                            //return list of object ids
-                            string objectIds = line.Split(' ')[1];
-                            List<string> objectIdsList = objectIds.Split(',').ToList();
-                            ObjectIdsFound.AddRange(objectIdsList);
-                            ObjectIdsFound = ObjectIdsFound.Distinct().ToList();
+                            //keyword in index file
+                            string keyword = line.Split(' ')[0];
+                            if (keyword.ToLower().Contains(word.ToLower()))
+                            {
+                                //return list of object ids
+                                string objectIds = line.Split(' ')[1];
+                                List<string> objectIdsList = objectIds.Split(',').ToList();
+                                ObjectIdsFound.AddRange(objectIdsList);
+                                ObjectIdsFound = ObjectIdsFound.Distinct().ToList();
+                            }
                         }
                     }
-
                 }
             }
                 
