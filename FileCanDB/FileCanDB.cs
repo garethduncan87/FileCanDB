@@ -130,7 +130,7 @@ namespace Duncan.FileCanDB
                     }
                 case StorageMethod.bson:
                     {
-                        SerializeToFile.SerializeToFileEncryptedBson<T>(MyPacket, FilePath, Password);
+                        SerializeToFile.SerializeToFileBson<T>(MyPacket, FilePath);
                         break;
                     }
                 default:
@@ -147,7 +147,7 @@ namespace Duncan.FileCanDB
             }
 
             //Name the packet if it has been provided a name
-            if (string.IsNullOrEmpty(PacketName))
+            if (!string.IsNullOrEmpty(PacketName))
             {
                 //Give packet a name
                 NamePacket(PacketId, Collection, Area, PacketName);

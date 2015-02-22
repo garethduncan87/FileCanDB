@@ -44,7 +44,7 @@ namespace Duncan.FileCanDB.Tests
         public void NamePacketTest()
         {
             TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
-            string EntryId = MySharpFileDB.InsertPacket(MyTestObject, "Blog", "GarethsBlog", Password);
+            string EntryId = MySharpFileDB.InsertPacket(MyTestObject, "Blog", "GarethsBlog", null, Password);
             MySharpFileDB.NamePacket(EntryId, "GarethsBlog", "Blog", "TestPacketId");
 
             PacketModel<TestObject> result = MySharpFileDB.GetPacketByName<TestObject>("TestPacketId", "Blog", "GarethsBlog", Password);
