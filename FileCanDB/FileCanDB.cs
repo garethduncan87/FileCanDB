@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Duncan.FileCanDB.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using System;
 using System.Collections.Generic;
@@ -17,126 +18,177 @@ namespace Duncan.FileCanDB
         encrypted
     };
 
-    public class FileCanDB : IFileCanDB
+    public class FileCanDB
     {
         private const string EncryptedDetailsFileExtension = ".details";
-        private string DbPath;
+        private string DatabaseLocation;
         private bool EnableIndexing;
         private StorageMethod ChosenStorageMethod;
 
-        public FileCanDB(string DatabaseStorePath, StorageMethod StorageMethodValue, bool EnableIndexing)
+        public FileCanDB(string DatabaseLocation, StorageMethod StorageMethodValue, bool EnableIndexing)
         {
-            this.DbPath = DatabaseStorePath;
+            this.DatabaseLocation = DatabaseLocation;
             this.ChosenStorageMethod = StorageMethodValue;
             this.EnableIndexing = EnableIndexing;
+        }
+
+        public string GenerateId()
+        {
+            return DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
+        }
+
+        /// <summary>
+        /// All packets are inserted and made with an ID
+        /// </summary>
+        /// <param name="PacketId"></param>
+        /// <param name="PacketName"></param>
+        /// <returns>Bool: Object has been named</returns>
+        public void NamePacket(string PacketId, string Collection, string Area, string PacketName)
+        {
+            string FileDirectory = DatabaseLocation + "\\" + Area + "\\" + Collection + "\\PacketNames";
+            if(!Directory.Exists(FileDirectory))
+            {
+                Directory.CreateDirectory(FileDirectory);
+            }
+
+            string FilePath = FileDirectory + "\\"  + PacketId + "_" + PacketName + ".json";
+            //Check Name doesn't already exist.
+            if (File.Exists(FilePath))
+            {
+                File.Delete(FilePath);
+            }
+            PacketNameModel MyPacketName = new PacketNameModel();
+            MyPacketName.Id = PacketId;
+            MyPacketName.Name = PacketName;
+
+            PacketModel<PacketNameModel> MyPacketModel = new PacketModel<PacketNameModel>();
+            MyPacketModel.Data = MyPacketName;
+            SerializeToFile.SerializeToFileJson<PacketNameModel>(MyPacketModel, FilePath);
+        }
+
+        /// <summary>
+        /// Delete packet name link
+        /// </summary>
+        /// <param name="PacketId"></param>
+        /// <param name="Collection"></param>
+        /// <param name="Area"></param>
+        private void DeletePacketName(string PacketId, string Collection, string Area)
+        {
+            string FilePath = DatabaseLocation + "\\" + Area + "\\" + Collection + "\\PacketNames";
+            if(Directory.Exists(FilePath))
+            {
+                var PacketNames = Directory.EnumerateFiles(FilePath).Where(m => m.StartsWith(PacketId));
+                foreach (string file in PacketNames)
+                {
+                    if (file.StartsWith(PacketId))
+                    {
+                        //File found. Delete it
+                        File.Delete(file);
+                    }
+                }
+            }
+            
         }
 
         /// <summary>
         /// Inserts object into collection. If password is provided the enum StorageMethod value will be changed to "encrypted".
         /// </summary>
         /// <typeparam name="T">Type of object to store in the database</typeparam>
-        /// <param name="ObjectData">The object to store in the database</param>
+        /// <param name="PacketData">The object to store in the database</param>
         /// <returns>Returns an ID of the newly inserted object into the database</returns>
-        public string InsertObject<T>(T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null)
+        public string InsertPacket<T>(T PacketData, string Area, string Collection, string PacketName = "", string Password = "", List<string> KeyWords = null)
         {
             //Create file name. Use datetime tick so easier to sort files by time created, then append guid to prevent any duplicates
-            
-
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
-            string DirectoryBlockPath;
-            string FilePath;
-
-            //Does Directory for collection exist?
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
             if (!Directory.Exists(DirectoryPath))
             {
-                Directory.CreateDirectory(DirectoryPath + "\\1");
+                Directory.CreateDirectory(DirectoryPath);
+            }
+            string FilePath;
+            string PacketId = GenerateId();
+            //Check if file already exists 
+            FilePath = DirectoryPath + "\\" + PacketId + "." + ChosenStorageMethod;
+            if (File.Exists(FilePath))
+            {
+                throw new Exception("Packet already exists. Either delete first or use UpdatePacket");
             }
 
-            //Count number of blocks in a collection. If 0, then create a directory named '1'
-            int DirectoryBlockCount = Directory.EnumerateDirectories(DirectoryPath).Count();
-            if (DirectoryBlockCount == 0)
-            {
-                Directory.CreateDirectory(DirectoryPath + "\\1");
-            }
-            
-            //Get latest number value in folder
-            //Get all directory paths, split path name after last \\
-            //Then convert list to an int
-            //Finally select the maximum value
-            int LatestBlockNumber = Directory.EnumerateDirectories(DirectoryPath).Select(m => m.Split('\\').Last()).Select(int.Parse).Max();
-            string FileName = LatestBlockNumber + "_" + DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
-            //Check count in this directory - if less than 10 thousand then create new block
-            DirectoryBlockPath = DirectoryPath + "\\" + LatestBlockNumber.ToString();
-            int NumberOfFilesInBlock = Directory.EnumerateFiles(DirectoryBlockPath).Count();
- 
-            if (NumberOfFilesInBlock >= 1000)
-            {
-                LatestBlockNumber = LatestBlockNumber + 1;
-                DirectoryBlockPath = DirectoryPath + "\\" + (LatestBlockNumber);
-                Directory.CreateDirectory(DirectoryBlockPath);
-            }
-
-            //Create file path. The first part of an objectid is the Block number the file is found in
-            FilePath = DirectoryBlockPath + "\\" + FileName + "." + ChosenStorageMethod;
+            //PacketWrapper
+            PacketModel<T> MyPacket = new PacketModel<T>();
+            MyPacket.Created = DateTime.Now;
+            MyPacket.Data = PacketData;
+            MyPacket.Modified = DateTime.Now;
+            MyPacket.Id = PacketId;
 
             //Serialise object using Json.net
-            if (ChosenStorageMethod == StorageMethod.encrypted)
+            switch (ChosenStorageMethod)
             {
-                SerializeToFile.SerializeToFileEncryptedBson<T>(ObjectData, FilePath, Password);
-            }
-            else if (ChosenStorageMethod == StorageMethod.json)
-            {
-                SerializeToFile.SerializeToFileJson<T>(ObjectData, FilePath);
-            }
-            else
-            {
-                SerializeToFile.SerializeToFileBson<T>(ObjectData, FilePath);
+                case StorageMethod.encrypted:
+                    {
+                        SerializeToFile.SerializeToFileEncryptedBson<T>(MyPacket, FilePath, Password);
+                        break;
+                    }
+                case StorageMethod.bson:
+                    {
+                        SerializeToFile.SerializeToFileEncryptedBson<T>(MyPacket, FilePath, Password);
+                        break;
+                    }
+                default:
+                    {
+                        SerializeToFile.SerializeToFileJson<T>(MyPacket, FilePath);
+                        break;
+                    }
             }
 
             //Index object
             if (KeyWords != null && EnableIndexing)
             {
-                Indexing.IndexObject(DbPath, FileName, DatabaseId, CollectionId, KeyWords);
+                Indexing.IndexObject(DatabaseLocation, PacketId, Area, Collection, KeyWords);
             }
 
-            return FileName;
+            //Name the packet if it has been provided a name
+            if (string.IsNullOrEmpty(PacketName))
+            {
+                //Give packet a name
+                NamePacket(PacketId, Collection, Area, PacketName);
+            }
+
+            return PacketId;
         }
 
-        public bool UpdateObject<T>(string ObjectId, T ObjectData, string DatabaseId, string CollectionId, string Password = "", List<string> KeyWords = null)
+        public bool UpdatePacket<T>(string PacketId, T PacketData, string Area, string Collection, string Password = "", List<string> KeyWords = null)
         {
             // deserialize product from BSON
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
             if (Directory.Exists(DirectoryPath))
             {
-                //First part of any object id is the block path
-                //This should speed up the process if getting an object
-                string BlockNumber = string.Empty;
-                int l = ObjectId.IndexOf("_");
-                if (l > 0)
-                {
-                    BlockNumber = ObjectId.Substring(0, l);
-                }
-
                 //Possible file path
-                string FilePath = DirectoryPath + "\\" + BlockNumber + "\\" + ObjectId + "." + ChosenStorageMethod;
+                string FilePath = DirectoryPath + "\\" + PacketId + "." + ChosenStorageMethod;
 
                 //If File path exists
                 if (File.Exists(FilePath))
                 {
+                    //PacketWrapper
+                    PacketModel<T> MyPacket = new PacketModel<T>();
+                    MyPacket.Created = DateTime.Now;
+                    MyPacket.Data = PacketData;
+                    MyPacket.Modified = DateTime.Now;
+                    MyPacket.Id = PacketId;
+
                     if (ChosenStorageMethod == StorageMethod.encrypted)
                     {
                         //bson encrypted method
-                        SerializeToFile.SerializeToFileEncryptedBson<T>(ObjectData, FilePath, Password);
+                        SerializeToFile.SerializeToFileEncryptedBson<T>(MyPacket, FilePath, Password);
                     }
                     else if (ChosenStorageMethod == StorageMethod.bson)
                     {
                         //return bson
-                        SerializeToFile.SerializeToFileBson<T>(ObjectData,FilePath);
+                        SerializeToFile.SerializeToFileBson<T>(MyPacket, FilePath);
                     }
                     else
                     {
                         //return json
-                        SerializeToFile.SerializeToFileJson<T>(ObjectData,FilePath);
+                        SerializeToFile.SerializeToFileJson<T>(MyPacket, FilePath);
                     }
                 }
 
@@ -147,29 +199,20 @@ namespace Duncan.FileCanDB
         /// <summary>
         /// Deletes an object from the database
         /// </summary>
-        /// <param name="ObjectId">Object ID</param>
-        /// <param name="DatabaseId">Database ID</param>
-        /// <param name="CollectionId">Collection ID</param>
+        /// <param name="PacketId">Object ID</param>
+        /// <param name="Area">Database ID</param>
+        /// <param name="Collection">Collection ID</param>
         /// <returns>Returns true if file has been deleted</returns>
-        public bool DeleteObject(string ObjectId, string DatabaseId, string CollectionId)
+        public bool DeletePacket(string PacketId, string Area, string Collection)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
             bool FileDeleted = false;
             if (Directory.Exists(DirectoryPath))
             {
                 //Flag. Parallel loop can't return bool but can break, so set flag to indicate file has been deleted.
 
-                //First part of any object id is the block path
-                //This should speed up the process if getting an object
-                string BlockNumber = string.Empty;
-                int l = ObjectId.IndexOf("_");
-                if (l > 0)
-                {
-                    BlockNumber = ObjectId.Substring(0, l);
-                }
-
                 //Possible file path
-                string FilePath = DirectoryPath + "\\" + BlockNumber + "\\" + ObjectId + "." + ChosenStorageMethod;
+                string FilePath = DirectoryPath + "\\" + PacketId + "." + ChosenStorageMethod;
 
                 if (File.Exists(FilePath))
                 {
@@ -185,29 +228,40 @@ namespace Duncan.FileCanDB
                         FileDeleted = true;
                     }
 
+                    //If packet has been named, then delete the naming file
+                    DeletePacketName(PacketId, Collection, Area);
+
                     //Delete object from index file
                     if (EnableIndexing)
                     {
-                        Indexing.DeleteObjectIndexRecord(DbPath, ObjectId, DatabaseId, CollectionId);
+                        Indexing.DeleteObjectIndexRecord(DatabaseLocation, PacketId, Area, Collection);
                     }
 
                     //Check how many files left in directory. if 0, delete directory.
-                    int FileCount = Directory.EnumerateFiles(DirectoryPath + "\\" + BlockNumber).Count();
+                    int FileCount = Directory.EnumerateFiles(DirectoryPath).Count();
                     if (FileCount == 0)
                     {
-                        Directory.Delete(DirectoryPath + "\\" + BlockNumber);
+                        Directory.Delete(DirectoryPath);
                     }
                 }
             }
             return FileDeleted;
         }
 
-
-
-        public IList<string> FindObjects(string query, string DatabaseId, string CollectionId, int skip, int take)
+        public IList<string> FindObjects<T>(string query, string Area, string Collection, int skip, int take)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
-            string IndexPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId + "\\index.txt";
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
+            string IndexPath = DatabaseLocation + "\\" + Area + "\\" + Collection + "\\index.txt";
+
+            List<string> searchwords = query.Split(' ').ToList();
+            List<string> ObjectIdsFound = new List<string>();
+            return ObjectIdsFound;
+        }
+
+        public IList<string> FindObjectsUsingKeywords(string query, string Area, string Collection, int skip, int take)
+        {
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
+            string IndexPath = DatabaseLocation + "\\" + Area + "\\" + Collection + "\\index.txt";
 
             List<string> searchwords = query.Split(' ').ToList();
 
@@ -244,24 +298,28 @@ namespace Duncan.FileCanDB
         /// <summary>
         /// List all object ids in a collection
         /// </summary>
-        /// <param name="DatabaseId"></param>
-        /// <param name="CollectionId"></param>
+        /// <param name="Area"></param>
+        /// <param name="Collection"></param>
         /// <param name="skip"></param>
         /// <param name="take"></param>
         /// <returns></returns>
-        public IEnumerable<string> ListObjects(string DatabaseId, string CollectionId, int skip, int take)
+        public IEnumerable<string> ListPackets(string Area, string Collection, int skip = 0, int take = 0)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
             if (Directory.Exists(DirectoryPath))
             {
-                return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Skip(skip).Take(take).Select(x => Path.GetFileNameWithoutExtension(x));
+                if (take != 0)
+                {
+                    return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Skip(skip).Take(take).Select(x => Path.GetFileNameWithoutExtension(x));
+                }
+                return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Skip(skip).Select(x => Path.GetFileNameWithoutExtension(x));
             }
             return null;
         }
 
-        public int CollectionObjectsCount(string DatabaseId, string CollectionId)
+        public int CollectionPacketCount(string Area, string Collection)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
             if (Directory.Exists(DirectoryPath))
             {
                 return Directory.GetFiles(DirectoryPath, "*." + ChosenStorageMethod, SearchOption.AllDirectories).Count();
@@ -269,9 +327,9 @@ namespace Duncan.FileCanDB
             return 0;
         }
 
-        public int DatabaseCollectionsCount(string DatabaseId)
+        public int AreaCollectionsCount(string Area)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId;
+            string DirectoryPath = DatabaseLocation + "\\" + Area;
             if (Directory.Exists(DirectoryPath))
             {
                 return Directory.GetDirectories(DirectoryPath).Count();
@@ -284,20 +342,72 @@ namespace Duncan.FileCanDB
         /// If password provided, only files with the same password will be returned.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="DatabaseId"></param>
-        /// <param name="CollectionId"></param>
+        /// <param name="Area"></param>
+        /// <param name="Collection"></param>
         /// <param name="Password"></param>
         /// <returns></returns>
-        public IList<T> GetObjects<T>(string DatabaseId, string CollectionId, int skip, int take, string Password = "")
+        public IList<PacketModel<T>> GetPackets<T>(string Area, string Collection, int skip, int take, string Password = "")
         {
-            IEnumerable<string> ObjectIds = ListObjects(DatabaseId, CollectionId, skip, take);
-            IList<T> Objects = new List<T>();
+            IEnumerable<string> ObjectIds = ListPackets(Area, Collection, skip, take);
+            IList<PacketModel<T>> Objects = new List<PacketModel<T>>();
             Parallel.ForEach(ObjectIds, ObjectId =>
             {
-                var Object = GetObject<T>(ObjectId, DatabaseId, CollectionId, Password);
+                var Object = GetPacket<T>(ObjectId, Area, Collection, Password);
                 Objects.Add(Object);
             });
             return Objects;
+        }
+
+        /// <summary>
+        /// Get packet by name
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="PacketName"></param>
+        /// <param name="Area"></param>
+        /// <param name="Collection"></param>
+        /// <param name="Password"></param>
+        /// <returns></returns>
+        public PacketModel<T> GetPacketByName<T>(string PacketName, string Area, string Collection, string Password = "")
+        {
+            //Get packetid from name
+            string PacketId = GetPacketId(PacketName, Area, Collection);
+            return GetPacket<T>(PacketId, Area, Collection, Password);
+        }
+
+        /// <summary>
+        /// Get Id of Packet
+        /// </summary>
+        /// <param name="PacketName"></param>
+        /// <param name="Area"></param>
+        /// <param name="Collection"></param>
+        /// <returns></returns>
+        private string GetPacketId(string PacketName, string Area, string Collection)
+        {
+            PacketNameModel MyPacketName = new PacketNameModel();
+            string FileDirectory = DatabaseLocation + "\\" + Area + "\\" + Collection + "\\PacketNames\\";
+
+            if(Directory.Exists(FileDirectory))
+            {
+                var filepath = Directory.EnumerateFiles(FileDirectory).Where(m => m.Contains(PacketName)).FirstOrDefault();
+                PacketModel<PacketNameModel> MyPackerModel = new PacketModel<PacketNameModel>();
+
+
+                PacketModel<PacketNameModel> result = DeserializeFromFile.DeserializeFromFileJson<PacketNameModel>(filepath);
+                return result.Data.Id;
+            }
+            return null;          
+        }
+
+        /// <summary>
+        /// Get object by packet file path
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="FilePath">File path of packet</param>
+        /// <param name="Password">Password if file is encrypted</param>
+        /// <returns>Returns object</returns>
+        public PacketModel<T> GetPacket<T>(string FilePath, string Password = "")
+        {
+            return GetPacketData<T>(FilePath, Password);
         }
 
         /// <summary>
@@ -305,75 +415,77 @@ namespace Duncan.FileCanDB
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="ObjectId">Object ID</param>
-        /// <param name="DatabaseId">Database ID</param>
-        /// <param name="CollectionId">Collection ID</param>
+        /// <param name="Area">Database ID</param>
+        /// <param name="Collection">Collection ID</param>
         /// <param name="Password">Optional password parametert to enable encryption</param>
         /// <returns>Object stored in database</returns>
-        public T GetObject<T>(string ObjectId, string DatabaseId, string CollectionId, string Password = "")
+        public PacketModel<T> GetPacket<T>(string PacketId, string Area, string Collection, string Password = "")
         {
             // deserialize product from BSON
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
             if (Directory.Exists(DirectoryPath))
             {
-                //First part of any object id is the block path
-                //This should speed up the process if getting an object
-                string BlockNumber = string.Empty;
-                int l = ObjectId.IndexOf("_");
-                if (l > 0)
-                {
-                    BlockNumber = ObjectId.Substring(0, l);
-                }
-
-                //Possible file path
-                string FilePath = DirectoryPath + "\\" + BlockNumber + "\\" + ObjectId + "." + ChosenStorageMethod;
-
+                string FilePath = DirectoryPath + "\\" + PacketId + "." + ChosenStorageMethod;
                 //If File path exists
-                if (File.Exists(FilePath))
-                {
-                    if (ChosenStorageMethod == StorageMethod.encrypted)
-                    {
-                        //bson encrypted method
-                        return DeserializeFromFile.DeserializeFromFileBsonEncrypted<T>(FilePath, Password);
-                    }
-                    else if (ChosenStorageMethod == StorageMethod.bson)
-                    {
-                        //return bson
-                        return DeserializeFromFile.DeserializeFromFileBson<T>(FilePath);
-                    }
-                    else
-                    {
-                        //return json
-                        return DeserializeFromFile.DeserializeFromFileJson<T>(FilePath);
-                    }
-                }
-                
+                return GetPacketData<T>(FilePath, Password);           
             }
-            return default(T);
+            return default(PacketModel<T>);
         }
 
-
+        private PacketModel<T> GetPacketData<T>(string FilePath, string Password = "")
+        {
+            //If File path exists
+            if (File.Exists(FilePath))
+            {
+                if (ChosenStorageMethod == StorageMethod.encrypted)
+                {
+                    //bson encrypted method
+                    return DeserializeFromFile.DeserializeFromFileBsonEncrypted<T>(FilePath, Password);
+                }
+                else if (ChosenStorageMethod == StorageMethod.bson)
+                {
+                    //return bson
+                    return DeserializeFromFile.DeserializeFromFileBson<T>(FilePath);
+                }
+                else
+                {
+                    //return json
+                    return DeserializeFromFile.DeserializeFromFileJson<T>(FilePath);
+                }
+            }
+            return default(PacketModel<T>);
+        }
 
         /// <summary>
         /// Returns a list of Collection names found in a database
         /// </summary>
-        /// <param name="DatabaseId"></param>
+        /// <param name="Area"></param>
         /// <returns>An IList of string</returns>
-        public IList<string> GetCollections(string DatabaseId)
+        public IList<string> GetCollections(string Area)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId;
-            return Directory.GetDirectories(DirectoryPath).ToList();
+            string DirectoryPath = DatabaseLocation + "\\" + Area;
+            if (Directory.Exists(DirectoryPath))
+            {
+                return Directory.GetDirectories(DirectoryPath).Select(m => m.Substring(m.LastIndexOf('\\') + 1)).ToList();
+            }
+            return null;
+            
         }
 
         /// <summary>
-        /// Delete a database collection. Warning! Will delete all sub folders used to split up the collection into smaller blocks.
+        /// Delete a database collection. Warning! Will delete all sub files and folders
         /// </summary>
-        /// <param name="DatabaseId">Database Id</param>
-        /// <param name="CollectionId">Collection Id</param>
+        /// <param name="Area">Database Id</param>
+        /// <param name="Collection">Collection Id</param>
         /// <returns>Returns true if the collection was deleted</returns>
-        public bool DeleteCollection(string DatabaseId, string CollectionId)
+        public bool DeleteCollection(string Area, string Collection)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId;
-            Directory.Delete(DirectoryPath, true);
+            string DirectoryPath = DatabaseLocation + "\\" + Area + "\\" + Collection;
+
+            if(Directory.Exists(DirectoryPath))
+            {
+                Directory.Delete(DirectoryPath, true);
+            }
             if(Directory.Exists(DirectoryPath))
             {
                 return false;
@@ -384,11 +496,11 @@ namespace Duncan.FileCanDB
         /// <summary>
         /// Delete a database. Warning! Will remove the database folder including all sub folders and files. 
         /// </summary>
-        /// <param name="DatabaseId"></param>
+        /// <param name="Area"></param>
         /// <returns>Returns true if the datbase was deleted</returns>
-        public bool DeleteDatabase(string DatabaseId)
+        public bool DeleteDatabase(string Area)
         {
-            string DirectoryPath = DbPath + "\\" + DatabaseId;
+            string DirectoryPath = DatabaseLocation + "\\" + Area;
             Directory.Delete(DirectoryPath, true);
             if (Directory.Exists(DirectoryPath))
             {

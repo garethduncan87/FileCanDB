@@ -9,9 +9,9 @@ namespace Duncan.FileCanDB
 {
     public static class Indexing
     {
-        public static void IndexObject(string DbPath, string ObjectId, string DatabaseId, string CollectionId, List<string> KeyWords)
+        public static void IndexObject(string DbPath, string ObjectId, string Area, string Collection, List<string> KeyWords)
         {
-            string IndexPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId + "\\index.txt";
+            string IndexPath = DbPath + "\\" + Area + "\\" + Collection + "\\index.txt";
             if (!File.Exists(IndexPath))
             {
                 //create file
@@ -70,46 +70,50 @@ namespace Duncan.FileCanDB
             File.Move(tempFile, IndexPath);
         }
 
-        public static void DeleteObjectIndexRecord(string DbPath, string ObjectId, string DatabaseId, string CollectionId)
+        public static void DeleteObjectIndexRecord(string DbPath, string ObjectId, string Area, string Collection)
         {
-            string IndexPath = DbPath + "\\" + DatabaseId + "\\" + CollectionId + "\\index.txt";
-            string tempFile = Path.GetTempFileName();
-            using (var sr = new StreamReader(IndexPath))
-            using (var sw = new StreamWriter(tempFile))
+            string IndexPath = DbPath + "\\" + Area + "\\" + Collection + "\\index.txt";
+            if(File.Exists(IndexPath))
             {
-                string line;
-                while ((line = sr.ReadLine()) != null)
+                string tempFile = Path.GetTempFileName();
+                using (var sr = new StreamReader(IndexPath))
+                using (var sw = new StreamWriter(tempFile))
                 {
-                    if (line.Contains(ObjectId))
+                    string line;
+                    while ((line = sr.ReadLine()) != null)
                     {
-                        //Remove objectid from list and re create the line
-                        string keyword = line.Split(' ')[0];
-                        string objectIds = line.Split(' ')[1];
-                        List<string> objectIdsList = objectIds.Split(',').ToList();
-                        objectIdsList.Remove(ObjectId);
-
-                        //If there are objects in the list, then right the line to the index file
-                        if (objectIdsList.Count > 0)
+                        if (line.Contains(ObjectId))
                         {
-                            sw.WriteLine(keyword + " " + string.Join(",", new List<string>(objectIdsList).ToArray()));
+                            //Remove objectid from list and re create the line
+                            string keyword = line.Split(' ')[0];
+                            string objectIds = line.Split(' ')[1];
+                            List<string> objectIdsList = objectIds.Split(',').ToList();
+                            objectIdsList.Remove(ObjectId);
+
+                            //If there are objects in the list, then right the line to the index file
+                            if (objectIdsList.Count > 0)
+                            {
+                                sw.WriteLine(keyword + " " + string.Join(",", new List<string>(objectIdsList).ToArray()));
+                            }
+                        }
+                        else
+                        {
+                            //If the line does not contain the object id, then write the line back to the index file
+                            sw.WriteLine(line);
                         }
                     }
-                    else
-                    {
-                        //If the line does not contain the object id, then write the line back to the index file
-                        sw.WriteLine(line);
-                    }
+                }
+
+                //Delete the original index file
+                File.Delete(IndexPath);
+
+                //recreate the new index file
+                if (File.ReadLines(tempFile).Count() > 0)
+                {
+                    File.Move(tempFile, IndexPath);
                 }
             }
             
-            //Delete the original index file
-            File.Delete(IndexPath);
-
-            //recreate the new index file
-            if (File.ReadLines(tempFile).Count() > 0)
-            {
-                File.Move(tempFile, IndexPath);
-            }
         }
     }
 }
