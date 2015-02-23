@@ -10,16 +10,16 @@ namespace Duncan.FileCanDB.Tests
     [TestClass]
     public class FileCanDBTests
     {
-        public StorageMethod ChosenStorage;
+        public StorageType ChosenStorage;
         public string Password;
         bool EnableIndexing;
         FileCanDB MySharpFileDB;
         public FileCanDBTests()
         {
-            this.ChosenStorage = StorageMethod.encrypted;
+            this.ChosenStorage = StorageType.encrypted;
             this.EnableIndexing = true;
             Password = string.Empty;
-            if (ChosenStorage == StorageMethod.encrypted)
+            if (ChosenStorage == StorageType.encrypted)
             {
                 Password = "12345678";
             }
