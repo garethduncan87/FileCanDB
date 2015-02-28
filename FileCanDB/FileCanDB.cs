@@ -59,7 +59,7 @@ namespace Duncan.FileCanDB
         /// <summary>
         /// Name a Packet already in the database
         /// </summary>
-        /// <param name="PacketId">Packet Id</param>
+        /// <param name="PacketId">Packet id</param>
         /// <param name="PacketName">Packet Name</param>
         /// <returns>Bool: Packet has been named</returns>
         public void NamePacket(string PacketId, string PacketName)
