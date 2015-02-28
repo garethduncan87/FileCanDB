@@ -16,7 +16,7 @@ namespace Duncan.FileCanDB.Tests
         private StorageType _chosenStorage;
         private string _password;
         private bool _enableIndexing;
-        private FileCanDB _myFileCanDb;
+        private FileCanDB<TestObject> _myFileCanDb;
 
         public FileCanDBTests()
         {
@@ -28,7 +28,7 @@ namespace Duncan.FileCanDB.Tests
                 _password = "12345678";
             }
 
-            _myFileCanDb = new FileCanDB(_databaseLocation, _area, _collection, _chosenStorage, _enableIndexing);
+            _myFileCanDb = new FileCanDB<TestObject>(_databaseLocation, _area, _collection, _chosenStorage, _enableIndexing);
         }
 
         [TestMethod]
@@ -50,17 +50,17 @@ namespace Duncan.FileCanDB.Tests
             string EntryId;
             if (_chosenStorage == StorageType.encrypted)
             {
-                EntryId = _myFileCanDb.InsertPacket<TestObject>(MyTestObject, _password);
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject, _password);
             }
             else
             {
-                EntryId = _myFileCanDb.InsertPacket<TestObject>(MyTestObject);
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject);
             }
 
             //Provide the packet with a name
             _myFileCanDb.NamePacket(EntryId, "TestPacketId");
 
-            PacketModel<TestObject> result = _myFileCanDb.GetPacketByName<TestObject>("TestPacketId", _password);
+            PacketModel<TestObject> result = _myFileCanDb.GetPacketByName("TestPacketId", _password);
             if(result.Data == null)
             {
                 Assert.Fail("Failed to name packet");
@@ -80,12 +80,12 @@ namespace Duncan.FileCanDB.Tests
             string PacketId;
             if (_chosenStorage == StorageType.encrypted)
             {
-                PacketId = _myFileCanDb.InsertPacket<TestObject>(MyTestObject, _password);
+                PacketId = _myFileCanDb.InsertPacket(MyTestObject, _password);
                 
             }
             else
             {
-                PacketId = _myFileCanDb.InsertPacket<TestObject>(MyTestObject);
+                PacketId = _myFileCanDb.InsertPacket(MyTestObject);
             }
 
             // index file
@@ -100,11 +100,11 @@ namespace Duncan.FileCanDB.Tests
             PacketModel<TestObject> ReturnedObject;
             if (_chosenStorage == StorageType.encrypted)
             {
-                ReturnedObject = _myFileCanDb.GetPacket<TestObject>(PacketId, _password);
+                ReturnedObject = _myFileCanDb.GetPacket(PacketId, _password);
             }
             else
             {
-                 ReturnedObject = _myFileCanDb.GetPacket<TestObject>(PacketId);
+                 ReturnedObject = _myFileCanDb.GetPacket(PacketId);
             }
 
             //Find by index
@@ -132,11 +132,11 @@ namespace Duncan.FileCanDB.Tests
             string EntryId;
             if (_chosenStorage == StorageType.encrypted)
             {
-                EntryId = _myFileCanDb.InsertPacket<TestObject>(MyTestObject, _password);
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject, _password);
             }
             else
             {
-                EntryId = _myFileCanDb.InsertPacket<TestObject>(MyTestObject);
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject);
             }
 
             if (string.IsNullOrEmpty(EntryId))
