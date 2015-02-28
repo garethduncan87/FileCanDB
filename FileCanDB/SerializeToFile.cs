@@ -1,4 +1,5 @@
 ﻿using Duncan.FileCanDB;
+using Duncan.FileCanDB.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using System;
@@ -17,7 +18,7 @@ namespace Duncan.FileCanDB
     {
         private const string EncryptedDetailsFileExtension = ".details";
 
-        public static void SerializeToFileEncryptedBson<T>(T ObjectData, string FilePath, string Password)
+        public static bool SerializeToFileEncryptedBson<T>(PacketModel<T> PacketData, string FilePath, string Password)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -25,7 +26,7 @@ namespace Duncan.FileCanDB
                 // serialize product to BSON
                 using (BsonWriter writer = new BsonWriter(ms))
                 {
-                    serializer.Serialize(writer, ObjectData);
+                    serializer.Serialize(writer, PacketData);
 
                     //If object exists move to delete as can't overwrite
                     bool RequiredToDelete = false;
@@ -45,8 +46,12 @@ namespace Duncan.FileCanDB
                         EncryptedDetails MyEncryptionDetails = new EncryptedDetails();
                         MyEncryptionDetails.salt = Salt;
 
+                        PacketModel<EncryptedDetails> MyPacket = new PacketModel<EncryptedDetails>();
+                        MyPacket.Data = MyEncryptionDetails;
+                        
+
                         //Store encryption details in a new file with same name with .s as extension
-                        SerializeToFileBson(MyEncryptionDetails, FilePath + EncryptedDetailsFileExtension);
+                        SerializeToFileBson<EncryptedDetails>(MyPacket, FilePath + EncryptedDetailsFileExtension);
 
                         using (MemoryStream ems = new MemoryStream(EncryptedData))
                         {
@@ -59,11 +64,13 @@ namespace Duncan.FileCanDB
                     {
                         File.Delete(FilePath + ".delete");
                     }
+
+                    return true;
                 }
             }
         }
 
-        public static void SerializeToFileBson<T>(T ObjectData, string FilePath)
+        public static bool SerializeToFileBson<T>(PacketModel<T> PacketData, string FilePath)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -71,7 +78,7 @@ namespace Duncan.FileCanDB
                 // serialize product to BSON
                 using (BsonWriter writer = new BsonWriter(ms))
                 {
-                    serializer.Serialize(writer, ObjectData);
+                    serializer.Serialize(writer, PacketData);
                     
                     //If object exists move to delete as can't overwrite
                     bool RequiredToDelete = false;
@@ -93,16 +100,15 @@ namespace Duncan.FileCanDB
                     {
                         File.Delete(FilePath + ".delete");
                     }
-                    
+                    return true;
                 }
             }
         }
 
-        public static void SerializeToFileJson<T>(T ObjectData, string FilePath)
+        public static bool SerializeToFileJson<T>(PacketModel<T> PacketData, string FilePath)
         {
             try
             {
-                JsonSerializer serializer = new JsonSerializer();
                 //Move file to delete as can't overwrite
                 bool RequiredToDelete = false;
                 if (File.Exists(FilePath))
@@ -110,24 +116,24 @@ namespace Duncan.FileCanDB
                     File.Move(FilePath, FilePath + ".delete");
                     RequiredToDelete = true;
                 }
-                using (StreamWriter sw = new StreamWriter(FilePath))
-                using (JsonWriter writer = new JsonTextWriter(sw))
+
+
+                using (StreamWriter file = File.CreateText(FilePath))
                 {
-                    
-                    
-                    serializer.Serialize(writer, ObjectData);
-                    
-                   
+                    JsonSerializer serializer = new JsonSerializer();
+                    serializer.Serialize(file, PacketData);
                 }
+
                 //Finally delete the old file
                 if (RequiredToDelete)
                 {
                     File.Delete(FilePath + ".delete");
                 }
+                return true;
             }
-            catch (Exception ex)
+            catch
             {
-                throw ex;
+                return false;
             }
         }
     }

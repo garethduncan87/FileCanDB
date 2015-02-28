@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Duncan.FileCanDB.Models;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Bson;
 using System;
 using System.Collections.Generic;
@@ -12,20 +13,22 @@ namespace Duncan.FileCanDB
     public static class DeserializeFromFile
     {
         private const string EncryptedDetailsFileExtension = ".details";
-        public static T DeserializeFromFileJson<T>(string FilePath)
+        public static PacketModel<T> DeserializeFromFileJson<T>(string FilePath)
         {
             using (StreamReader sr = new StreamReader(FilePath))
             {
                 using (JsonReader reader = new JsonTextReader(sr))
                 {
                     JsonSerializer serializer = new JsonSerializer();
-                    var result = serializer.Deserialize<T>(reader);
+                    var result = serializer.Deserialize<PacketModel<T>>(reader);
+                   
+                   
                     return result;
                 }
             }
         }
 
-        public static T DeserializeFromFileBson<T>(string FilePath)
+        public static PacketModel<T> DeserializeFromFileBson<T>(string FilePath)
         {
             using (MemoryStream memoryStream = new MemoryStream())
             {
@@ -37,11 +40,11 @@ namespace Duncan.FileCanDB
 
                 BsonReader reader = new BsonReader(memoryStream);
                 JsonSerializer serializer = new JsonSerializer();
-                return serializer.Deserialize<T>(reader);
+                return serializer.Deserialize<PacketModel<T>>(reader);
             }
         }
 
-        public static T DeserializeFromFileBsonEncrypted<T>(string FilePath, string Password)
+        public static PacketModel<T> DeserializeFromFileBsonEncrypted<T>(string FilePath, string Password)
         {
             byte[] unencrypted;
 
@@ -53,8 +56,10 @@ namespace Duncan.FileCanDB
                 }
                 memoryStream.Position = 0;
 
+                PacketModel<EncryptedDetails> EncryptedDetailsPacketModel = new PacketModel<EncryptedDetails>();
                 EncryptedDetails MyEncryptedDetails = new EncryptedDetails();
-                MyEncryptedDetails = DeserializeFromFileBson<EncryptedDetails>(FilePath + EncryptedDetailsFileExtension);
+                EncryptedDetailsPacketModel = DeserializeFromFileBson<EncryptedDetails>(FilePath + EncryptedDetailsFileExtension);
+                MyEncryptedDetails = EncryptedDetailsPacketModel.Data;
 
                 unencrypted = Encryption.AES_Decrypt(memoryStream.ToArray(), Encoding.UTF8.GetBytes(Encryption.GetHash(Password, MyEncryptedDetails.salt)), MyEncryptedDetails.salt);
             }
@@ -65,10 +70,10 @@ namespace Duncan.FileCanDB
                 {
                     BsonReader reader = new BsonReader(ms);
                     JsonSerializer serializer = new JsonSerializer();
-                    return serializer.Deserialize<T>(reader);
+                    return serializer.Deserialize<PacketModel<T>>(reader);
                 }
             }
-            return default(T);
+            return default(PacketModel<T>);
         }
     }
 }

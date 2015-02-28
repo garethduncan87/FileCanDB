@@ -48,8 +48,9 @@
   <ItemGroup>
     <Compile Include="DeserializeFromFile.cs" />
     <Compile Include="Encryption.cs" />
-    <Compile Include="Indexing.cs" />
     <Compile Include="Interface.cs" />
+    <Compile Include="Models\PacketModel.cs" />
+    <Compile Include="Models\PacketNameModel.cs" />
     <Compile Include="SerializeToFile.cs" />
     <Compile Include="FileCanDB.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

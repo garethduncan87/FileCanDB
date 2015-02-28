@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Duncan.FileCanDB;
 using System.Collections.Generic;
+using Duncan.FileCanDB.Models;
 
 
 namespace Duncan.FileCanDB.Tests
@@ -9,26 +10,33 @@ namespace Duncan.FileCanDB.Tests
     [TestClass]
     public class FileCanDBTests
     {
-        public StorageMethod ChosenStorage;
-        public string Password;
-        bool EnableIndexing;
+        private string _area = "Blog";
+        private string _collection = "GarethsBlog";
+        private string _databaseLocation = @"c:\FileCanDB";
+        private StorageType _chosenStorage;
+        private string _password;
+        private bool _enableIndexing;
+        private IFileCanDB<TestObject> _myFileCanDb;
+
         public FileCanDBTests()
         {
-            this.ChosenStorage = StorageMethod.encrypted;
-            this.EnableIndexing = true;
-            Password = string.Empty;
-            if (ChosenStorage == StorageMethod.encrypted)
+            this._chosenStorage = StorageType.encrypted;
+            this._enableIndexing = true;
+            _password = string.Empty;
+            if (_chosenStorage == StorageType.encrypted)
             {
-                Password = "12345678";
+                _password = "12345678";
             }
+
+            _myFileCanDb = new FileCanDB<TestObject>(_databaseLocation, _area, _collection, _chosenStorage, _enableIndexing);
         }
 
         [TestMethod]
         public void InsertObjectTest()
         {
             TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
-            string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password);
+            
+            string EntryId = _myFileCanDb.InsertPacket(MyTestObject, _password);
             if (string.IsNullOrEmpty(EntryId))
             {
                 Assert.Fail("No ID returned for newly inserted object");
@@ -36,99 +44,81 @@ namespace Duncan.FileCanDB.Tests
         }
 
         [TestMethod]
-        public void SelectObjectsTest()
+        public void NamePacketTest()
         {
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
-            //Insert 10 files
-            List<string> EntryIds = new List<string>();
-            for (int i = 0; i < 10; i++)
+            TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
+            string EntryId;
+            if (_chosenStorage == StorageType.encrypted)
             {
-                
-                TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test");
-                List<string> Keywords = new List<string>();
-                Keywords.Add("Programming");
-                Keywords.Add("Coding");
-                Keywords.Add("Generics");
-                string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password, Keywords);
-                EntryIds.Add(EntryId);
-                if (string.IsNullOrEmpty(EntryId))
-                {
-                    Assert.Fail("No ID returned for newly inserted object");
-                }
-            }
-
-            var results = MySharpFileDB.GetObjects<TestObject>("Blog", "GarethsBlog", 0, 100, Password);
-
-            //Update files
-            foreach (var id in EntryIds)
-            {
-
-                TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test");
-                List<string> Keywords = new List<string>();
-                Keywords.Add("Programming");
-                Keywords.Add("Coding");
-                Keywords.Add("Generics");
-                MySharpFileDB.UpdateObject<TestObject>(id, MyTestObject, "Blog", "GarethsBlog", Password, Keywords);
-            }
-
-
-
-            if (results.Count >= EntryIds.Count)
-            {
-                
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject, _password);
             }
             else
             {
-                Assert.Fail(string.Format("Not enough files returned. There were {0} files created, but only {1} was returned", EntryIds.Count, results.Count));
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject);
             }
-            //Get all objects
-            
-            //Find ojects
-            IList<string> FindObjects = MySharpFileDB.FindObjects("programming generics", "Blog", "GarethsBlog", 0, 100);
 
-            if(FindObjects.Count == 0)
+            //Provide the packet with a name
+            _myFileCanDb.NamePacket(EntryId, "TestPacketId");
+
+            PacketModel<TestObject> result = _myFileCanDb.GetPacketByName("TestPacketId", _password);
+            if(result.Data == null)
             {
-                Assert.Fail("No records found");
+                Assert.Fail("Failed to name packet");
             }
-
-            foreach (string EntryId in EntryIds)
-            {
-                //Delete file as its only a test
-                if (!MySharpFileDB.DeleteObject(EntryId, "Blog", "GarethsBlog"))
-                {
-                    Assert.Fail("Failed to delete file");
-                }
-            }
-
         }
+
 
         [TestMethod]
         public void SelectObjectTest()
         {
 
             //Craete file first
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
             TestObject MyTestObject = new TestObject("Select option test", DateTime.Now, "select option test " + Guid.NewGuid().ToString("N"), "select option test" );
-            List<string> Keywords = new List<string>();
-            Keywords.Add("Programming");
-            Keywords.Add("Coding");
-            Keywords.Add("Generics");
-            string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog", Password, Keywords);
-            if (string.IsNullOrEmpty(EntryId))
+            List<string> KeyWords = new List<string>();
+            KeyWords.Add("coding");
+            KeyWords.Add("generics");
+            string PacketId;
+            if (_chosenStorage == StorageType.encrypted)
+            {
+                PacketId = _myFileCanDb.InsertPacket(MyTestObject, _password);
+                
+            }
+            else
+            {
+                PacketId = _myFileCanDb.InsertPacket(MyTestObject);
+            }
+
+            // index file
+            _myFileCanDb.IndexPacket(PacketId, KeyWords);
+
+            if (string.IsNullOrEmpty(PacketId))
             {
                 Assert.Fail("No ID returned for newly inserted object");
             }
 
             //Select file
-            TestObject ReturnedObject;
-            ReturnedObject = MySharpFileDB.GetObject<TestObject>(EntryId, "Blog", "GarethsBlog", Password);
+            PacketModel<TestObject> ReturnedObject;
+            if (_chosenStorage == StorageType.encrypted)
+            {
+                ReturnedObject = _myFileCanDb.GetPacket(PacketId, _password);
+            }
+            else
+            {
+                 ReturnedObject = _myFileCanDb.GetPacket(PacketId);
+            }
+
+            //Find by index
+            IList<string> results = _myFileCanDb.FindPacketsUsingIndex("coding");
+
+            
+
             if (ReturnedObject == null)
             {
                 Assert.Fail("No file returned");
             }
 
             //Delete file as its only a test
-            if (!MySharpFileDB.DeleteObject(EntryId, "Blog", "GarethsBlog"))
+            if (!_myFileCanDb.DeletePacket(PacketId))
             {
                 Assert.Fail("Failed to delete file");
             }
@@ -137,17 +127,24 @@ namespace Duncan.FileCanDB.Tests
         [TestMethod]
         public void DeleteObjectTest()
         {
-            IFileCanDB MySharpFileDB = new FileCanDB(@"c:\SharpFileDB", ChosenStorage, EnableIndexing);
             //Create file first
             TestObject MyTestObject = new TestObject("delete option test", DateTime.Now, "delete option test " + Guid.NewGuid().ToString("N"), "delete option test");
-            string EntryId = MySharpFileDB.InsertObject(MyTestObject, "Blog", "GarethsBlog");
+            string EntryId;
+            if (_chosenStorage == StorageType.encrypted)
+            {
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject, _password);
+            }
+            else
+            {
+                EntryId = _myFileCanDb.InsertPacket(MyTestObject);
+            }
 
             if (string.IsNullOrEmpty(EntryId))
             {
                 Assert.Fail("No ID returned for newly inserted object");
             }
 
-            if (!MySharpFileDB.DeleteObject(EntryId, "Blog", "GarethsBlog"))
+            if (!_myFileCanDb.DeletePacket(EntryId))
             {
                 Assert.Fail("Failed to delete file");
             }
