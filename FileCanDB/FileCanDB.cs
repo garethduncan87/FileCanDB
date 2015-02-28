@@ -48,7 +48,7 @@ namespace Duncan.FileCanDB
 
 
         /// <summary>
-        /// Generate an Id that uses DateTime Ticks and a Guid
+        /// Generate an Id that uses DateTime Ticks and a Guid number
         /// </summary>
         /// <returns></returns>
         private string generateId()
