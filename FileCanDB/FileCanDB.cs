@@ -18,7 +18,7 @@ namespace Duncan.FileCanDB
         encrypted
     };
 
-    public class FileCanDB<T>
+    public class FileCanDB<T> : IFileCanDB<T>
     {
         private const string _encryptedDetailsFileExtension = ".details";
         private const string _collecitonIndexFilename = "index.txt";
@@ -268,7 +268,7 @@ namespace Duncan.FileCanDB
             return updatePacket(PacketId, PacketData, Password);
         }
 
-        public bool updatePacket(string PacketId, T PacketData, string Password = "")
+        private bool updatePacket(string PacketId, T PacketData, string Password = "")
         {
             // deserialize product from BSON
             if (Directory.Exists(_collectionPath))

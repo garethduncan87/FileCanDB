@@ -16,7 +16,7 @@ namespace Duncan.FileCanDB.Tests
         private StorageType _chosenStorage;
         private string _password;
         private bool _enableIndexing;
-        private FileCanDB<TestObject> _myFileCanDb;
+        private IFileCanDB<TestObject> _myFileCanDb;
 
         public FileCanDBTests()
         {

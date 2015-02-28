@@ -1,117 +1,181 @@
-﻿using System.Collections.Generic;
+﻿using Duncan.FileCanDB.Models;
+using System.Collections.Generic;
 namespace Duncan.FileCanDB
 {
-    public interface IFileCanDB
+    public interface IFileCanDB<T>
     {
-        /// <summary>
-        /// Inserts object into collection. If password is provided the enum StorageMethod value will be changed to "encrypted".
+         /// <summary>
+        /// Name a Packet already in the database
         /// </summary>
-        /// <typeparam name="T">Type of object to store in the database</typeparam>
-        /// <param name="ObjectData">The object to store in the database</param>
-        /// <returns>Returns an ID of the newly inserted object into the database</returns>
-        string InsertObject<T>(T ObjectData, string Area, string Collection, string FileName = "", string Password = "", List<string> KeyWords = null);
+        /// <param name="PacketId">Packet Id</param>
+        /// <param name="PacketName">Packet Name</param>
+        /// <returns>Bool: Packet has been named</returns>
+        void NamePacket(string PacketId, string PacketName);
 
         /// <summary>
-        /// Update an object in the database
+        /// Check that a Packet exists.
         /// </summary>
-        /// <typeparam name="T">Object type</typeparam>
-        /// <param name="ObjectId"></param>
-        /// <param name="ObjectData"></param>
-        /// <param name="Area"></param>
-        /// <param name="Collection"></param>
+        /// <param name="PacketId">Packet Id</param>
+        /// <returns>bool: Returns true if packet exists</returns>
+        bool CheckPacketExits(string PacketId);
+
+        /// <summary>
+        /// Inserts Packet into collection.
+        /// </summary>
+        /// <typeparam name="T">Type of Packet to store in the database</typeparam>
+        /// <param name="PacketData">The Packet to store in the database</param>
+        /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
+        string InsertPacket(T PacketData);
+
+        /// <summary>
+        /// Inserts Packet in an encrypted form into collection.
+        /// </summary>
+        /// <typeparam name="T">Type of Packet to store in the database</typeparam>
+        /// <param name="PacketData">The Packet to store in the database</param>
+        /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
+        string InsertPacket(T PacketData, string Password);
+
+        /// <summary>
+        /// Update a packet
+        /// </summary>
+        /// <typeparam name="T">Packet data type</typeparam>
+        /// <param name="PacketId">Packet Id</param>
+        /// <param name="PacketData">Packet Data</param>
+        /// <param name="KeyWords">Packet keywords</param>
+        /// <returns></returns>
+        bool UpdatePacket(string PacketId, T PacketData);
+
+        /// <summary>
+        /// Update an encrypted packet
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="PacketId"></param>
+        /// <param name="PacketData"></param>
         /// <param name="Password"></param>
         /// <param name="KeyWords"></param>
-        /// <returns>bool: Returns true if the object is updated successfully</returns>
-        bool UpdateObject<T>(string ObjectId, T ObjectData, string Area, string Collection, string Password = "", List<string> KeyWords = null);
+        /// <returns></returns>
+        bool UpdatePacket(string PacketId, T PacketData, string Password);
 
         /// <summary>
-        /// Deletes an object from the database
+        /// Deletes an Packet from the database
         /// </summary>
-        /// <param name="ObjectId">Object ID</param>
+        /// <param name="PacketId">Packet ID</param>
         /// <param name="Area">Database ID</param>
         /// <param name="Collection">Collection ID</param>
         /// <returns>Returns true if file has been deleted</returns>
-        bool DeleteObject(string ObjectId, string Area, string Collection);
+        bool DeletePacket(string PacketId);
+
+        IList<string> FindPackets(string query, int skip, int take);
+
+        IList<string> FindPacketsUsingIndex(string query);
 
         /// <summary>
-        /// Get an object from the database. If the Password is provided, the enum StorageMethod value will changed to "encrypted"
+        /// List all packet ids in a collection
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<string> ListPackets();
+
+        /// <summary>
+        /// List all packet ids in a collection
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<string> ListPackets(int skip);
+
+        /// <summary>
+        /// List all packet ids in a collection
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<string> ListPackets(int skip, int take);
+
+        int CollectionPacketCount();
+
+        int AreaCollectionsCount();
+
+        /// <summary>
+        /// Gets all packets in a databases collection. Optionl password parameter. Parallel method.
+        /// If password provided, only files with the same password will be returned.
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="ObjectId">Object ID</param>
-        /// <param name="Area">Database ID</param>
-        /// <param name="Collection">Collection ID</param>
-        /// <param name="Password">Optional password parametert to enable encryption</param>
-        /// <returns>Object stored in database</returns>
-        T GetObject<T>(string ObjectId, string Area, string Collection, string Password = "");
-
-        /// <summary>
-        /// Retrieves all objects in a collection in a database
-        /// </summary>
-        /// <typeparam name="T">Object type</typeparam>
-        /// <param name="Area">Database Id</param>
-        /// <param name="Collection">Collection Id</param>
-        /// <param name="Password">Optional password parametert to enable encryption</param>
+        /// <param name="Password"></param>
         /// <returns></returns>
-        IList<T> GetObjects<T>(string Area, string Collection, int skip, int take, string Password = "");
+        IList<PacketModel<T>> GetPackets(int skip, int take);
 
         /// <summary>
-        /// Delete a database from the system
+        /// Gets all encrypted packets in a databases collection. Optionl password parameter. Parallel method.
+        /// If password provided, only files with the same password will be returned.
         /// </summary>
-        /// <param name="Area">Database Id</param>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="Password"></param>
         /// <returns></returns>
-        bool DeleteDatabase(string Area);
+        IList<PacketModel<T>> GetPackets(int skip, int take, string Password);
 
         /// <summary>
-        /// Delete an entire collection from the database
+        /// Get packet by name
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="PacketName"></param>
+        /// <param name="Area"></param>
+        /// <param name="Collection"></param>
+        /// <returns></returns>
+        PacketModel<T> GetPacketByName(string PacketName);
+
+        /// <summary>
+        /// Get encrypted packet by name
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="PacketName"></param>
+        /// <param name="Password"></param>
+        /// <returns></returns>
+        PacketModel<T> GetPacketByName(string PacketName, string Password);
+
+        /// <summary>
+        /// Get Id of Packet by its name
+        /// </summary>
+        /// <param name="PacketName"></param>
+        /// <returns></returns>
+        string GetPacketId(string PacketName);
+
+        /// <summary>
+        /// Get an packet from the database. If the Password is provided, the enum StorageMethod value will changed to "encrypted"
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="PacketId">Packet ID</param>
+        /// <returns>Packet stored in database</returns>
+        PacketModel<T> GetPacket(string PacketId);
+
+        /// <summary>
+        /// Get an packet from the database. If the Password is provided, the enum StorageMethod value will changed to "encrypted"
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="PacketId">Packet ID</param>
+        /// <param name="Password">Optional password parametert to enable encryption</param>
+        /// <returns>Packet stored in database</returns>
+        PacketModel<T> GetPacket(string PacketId, string Password);
+
+        /// <summary>
+        /// Returns a list of Collection names found in a database
+        /// </summary>
+        /// <param name="Area"></param>
+        /// <returns>An IList of string</returns>
+        IList<string> GetCollections();
+
+        /// <summary>
+        /// Delete a database collection. Warning! Will delete all sub files and folders
         /// </summary>
         /// <param name="Area">Database Id</param>
         /// <param name="Collection">Collection Id</param>
         /// <returns>Returns true if the collection was deleted</returns>
-        bool DeleteCollection(string Area, string Collection);
+        bool DeleteCollection();
 
         /// <summary>
-        /// List all collection ids in a Database
+        /// Delete a database. Warning! Will remove the database folder including all sub folders and files. 
         /// </summary>
         /// <param name="Area"></param>
-        /// <returns>List of collection ids</returns>
-        IList<string> GetCollections(string Area);
+        /// <returns>Returns true if the datbase was deleted</returns>
+        bool DeleteDatabase();
 
-        /// <summary>
-        /// Counts the number of collections in a database
-        /// </summary>
-        /// <param name="Area"></param>
-        /// <returns>Returns a </returns>
-        int DatabaseCollectionsCount(string Area);
+        void IndexPacket(string PacketId, List<string> KeyWords);
 
-        /// <summary>
-        /// Counts the number of objects in a collection
-        /// </summary>
-        /// <param name="Area"></param>
-        /// <param name="Collection"></param>
-        /// <returns>An interger value representing the number of objects in a collection</returns>
-        int CollectionObjectsCount(string Area, string Collection);
-
-        /// <summary>
-        /// Returns a list of object ids in a collection
-        /// </summary>
-        /// <param name="Area">Database Id</param>
-        /// <param name="Collection">Collection Id</param>
-        /// <param name="skip">Number of objects to skip</param>
-        /// <param name="take">Number of objects to take</param>
-        /// <returns></returns>
-        IEnumerable<string> ListObjects(string Area, string Collection, int skip, int take);
-
-        /// <summary>
-        /// Find objects in a collection using the index file
-        /// </summary>
-        /// <param name="query">Space separated list of strings to query</param>
-        /// <param name="Area">Database Id</param>
-        /// <param name="Collection">Collection Id</param>
-        /// <param name="skip">Number of objects to skip</param>
-        /// <param name="take">Number of objects to take</param>
-        /// <returns></returns>
-        IList<string> FindObjectsUsingKeywords(string query, string Area, string Collection, int skip, int take);
-
-        string GenerateFileName();
+        void DeletePacketIndex(string PacketId);
     }
 }
