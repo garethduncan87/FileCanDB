@@ -189,11 +189,8 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        public string insertPacket(T PacketData, string Password)
+        private string insertPacket(T PacketData, string Password)
         {
-
-        
-
             if(_storageType != StorageType.encrypted)
             {
                 throw new Exception("StorageType is not set to encrypted.");
@@ -358,26 +355,7 @@ namespace Duncan.FileCanDB
             return FileDeleted;
         }
 
-        public IList<string> FindPackets(string query, int skip, int take)
-        {
-            List<string> PacketIdsFound = new List<string>();
-            if(!Directory.Exists(_collectionPath))
-            {
-               return PacketIdsFound;
-            }
-            List<string> searchwords = query.Split(' ').ToList();
-
-            var files = Directory.EnumerateFiles(_collectionPath);
-
-            foreach (var file in files)
-            {
-
-            }
-
-            return PacketIdsFound;
-        }
-
-        public IList<string> FindPacketsUsingIndex(string query)
+        public IEnumerable<string> FindPacketsUsingIndex(string query, int skip, int take)
         {
             IList<string> searchwords = query.Split(' ');
             List<string> PacketIdsFound = new List<string>();
@@ -391,8 +369,6 @@ namespace Duncan.FileCanDB
             {
                 foreach (string word in searchwords)
                 {
-                    //keyword in index file
-                    string keyword = line.Split(' ')[0];
                     if (line.Split(' ')[0].ToLower().Contains(word.ToLower()))
                     {
                         //return list of packet ids
@@ -404,7 +380,7 @@ namespace Duncan.FileCanDB
                 }
             });
 
-            return PacketIdsFound.OrderBy(m => m).ToList();
+            return PacketIdsFound.OrderBy(m => m).Skip(skip).Take(take);
         }
 
         /// <summary>
@@ -466,6 +442,30 @@ namespace Duncan.FileCanDB
         }
 
         /// <summary>
+        /// Gets all packets in a databases collection based on a query provided
+        /// If password provided, only files with the same password will be returned.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="Password"></param>
+        /// <returns>List: Returns a list of packet</returns>
+        public IList<PacketModel<T>> GetPackets(string query, int skip, int take)
+        {
+            return getPackets(null, skip, take);
+        }
+
+        /// <summary>
+        /// Gets all packets in a databases collection based on a query provided
+        /// If password provided, only files with the same password will be returned.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="Password"></param>
+        /// <returns>List: Returns a list of packet</returns>
+        public IList<PacketModel<T>> GetPackets(string query, int skip, int take, string Password)
+        {
+            return getPackets(null, skip, take, Password);
+        }
+
+        /// <summary>
         /// Gets all packets in a databases collection. Optionl password parameter. Parallel method.
         /// If password provided, only files with the same password will be returned.
         /// </summary>
@@ -474,7 +474,7 @@ namespace Duncan.FileCanDB
         /// <returns></returns>
         public IList<PacketModel<T>> GetPackets(int skip, int take)
         {
-            return _getPackets(skip, take);
+            return getPackets(null, skip, take);
         }
 
         /// <summary>
@@ -486,12 +486,21 @@ namespace Duncan.FileCanDB
         /// <returns></returns>
         public IList<PacketModel<T>> GetPackets(int skip, int take, string Password)
         {
-            return _getPackets(skip, take, Password);
+            return getPackets(null, skip, take, Password);
         }
 
-        private IList<PacketModel<T>> _getPackets(int skip, int take, string Password = "")
+        private IList<PacketModel<T>> getPackets(string query, int skip, int take, string Password = "")
         {
-            IEnumerable<string> PacketIds = ListPackets(skip, take);
+            IEnumerable<string> PacketIds;
+            if(string.IsNullOrEmpty(query))
+            {
+                PacketIds = ListPackets(skip, take);
+            }
+            else
+            {
+                PacketIds = FindPacketsUsingIndex(query, skip, take);
+            }
+
             IList<PacketModel<T>> Packets = new List<PacketModel<T>>();
             Parallel.ForEach(PacketIds, PacketId =>
             {
