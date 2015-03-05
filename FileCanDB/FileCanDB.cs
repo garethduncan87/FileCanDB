@@ -57,54 +57,6 @@ namespace Duncan.FileCanDB
         }
 
         /// <summary>
-        /// Name a Packet already in the database
-        /// </summary>
-        /// <param name="PacketId">Packet id</param>
-        /// <param name="PacketName">Packet Name</param>
-        /// <returns>Bool: Packet has been named</returns>
-        public void NamePacket(string PacketId, string PacketName)
-        {
-            if (!Directory.Exists(_collectionPacketNamesPath))
-            {
-                Directory.CreateDirectory(_collectionPacketNamesPath);
-            }
-
-            string FilePath = Path.Combine(_collectionPacketNamesPath, PacketId + "_" + PacketName + ".json");
-            //Check Name doesn't already exist.
-            if (File.Exists(FilePath))
-            {
-                File.Delete(FilePath);
-            }
-            PacketNameModel MyPacketName = new PacketNameModel();
-            MyPacketName.Id = PacketId;
-            MyPacketName.Name = PacketName;
-
-            PacketModel<PacketNameModel> MyPacketModel = new PacketModel<PacketNameModel>();
-            MyPacketModel.Data = MyPacketName;
-            SerializeToFile.SerializeToFileJson<PacketNameModel>(MyPacketModel, FilePath);
-        }
-
-        /// <summary>
-        /// Delete packet name link
-        /// </summary>
-        /// <param name="PacketId"></param>
-        private void DeletePacketName(string PacketId)
-        {
-            if (Directory.Exists(_collectionPacketNamesPath))
-            {
-                IEnumerable<string> PacketNames = Directory.EnumerateFiles(_collectionPacketNamesPath).Where(m => m.StartsWith(PacketId));
-                Parallel.ForEach(PacketNames, packetname =>
-                {
-                    if (packetname.StartsWith(PacketId))
-                    {
-                        //File found. Delete it
-                        File.Delete(packetname);
-                    }
-                });
-            }  
-        }
-
-        /// <summary>
         /// Check that a Packet exists.
         /// </summary>
         /// <param name="PacketId">Packet Id</param>
@@ -327,8 +279,6 @@ namespace Duncan.FileCanDB
                         FileDeleted = true;
                     }
 
-                    //If packet has been named, then delete the naming file
-                    DeletePacketName(PacketId);
 
                     //Delete packet from index file
                     if (_enableIndexing)

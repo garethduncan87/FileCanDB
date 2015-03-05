@@ -4,13 +4,7 @@ namespace Duncan.FileCanDB
 {
     public interface IFileCanDB<T>
     {
-         /// <summary>
-        /// Name a Packet already in the database
-        /// </summary>
-        /// <param name="PacketId">Packet Id</param>
-        /// <param name="PacketName">Packet Name</param>
-        /// <returns>Bool: Packet has been named</returns>
-        void NamePacket(string PacketId, string PacketName);
+
 
         /// <summary>
         /// Check that a Packet exists.

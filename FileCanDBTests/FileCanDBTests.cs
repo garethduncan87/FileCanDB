@@ -44,31 +44,6 @@ namespace Duncan.FileCanDB.Tests
         }
 
         [TestMethod]
-        public void NamePacketTest()
-        {
-            TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
-            string EntryId = _myFileCanDb.generateId();
-            if (_chosenStorage == StorageType.encrypted)
-            {
-                _myFileCanDb.InsertPacket(MyTestObject, EntryId, _password);
-            }
-            else
-            {
-                _myFileCanDb.InsertPacket(MyTestObject, EntryId);
-            }
-
-            //Provide the packet with a name
-            _myFileCanDb.NamePacket(EntryId, "TestPacketId");
-
-            PacketModel<TestObject> result = _myFileCanDb.GetPacketByName("TestPacketId", _password);
-            if(result.Data == null)
-            {
-                Assert.Fail("Failed to name packet");
-            }
-        }
-
-
-        [TestMethod]
         public void SelectObjectTest()
         {
 
