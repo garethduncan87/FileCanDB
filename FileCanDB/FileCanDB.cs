@@ -51,7 +51,7 @@ namespace Duncan.FileCanDB
         /// Generate an Id that uses DateTime Ticks and a Guid number
         /// </summary>
         /// <returns></returns>
-        private string generateId()
+        public string generateId()
         {
             return DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
         }
@@ -64,8 +64,6 @@ namespace Duncan.FileCanDB
         /// <returns>Bool: Packet has been named</returns>
         public void NamePacket(string PacketId, string PacketName)
         {
-
-            
             if (!Directory.Exists(_collectionPacketNamesPath))
             {
                 Directory.CreateDirectory(_collectionPacketNamesPath);
@@ -167,9 +165,9 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        public string InsertPacket(T PacketData)
+        public bool InsertPacket(T PacketData, string Id)
         {
-            return insertPacket(PacketData);
+            return insertPacket(PacketData, Id);
         }
 
         /// <summary>
@@ -178,9 +176,9 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        public string InsertPacket(T PacketData, string Password)
+        public bool InsertPacket(T PacketData, string Id, string Password)
         {
-            return insertPacket(PacketData, Password);
+            return insertPacket(PacketData, Id, Password);
         }
 
         /// <summary>
@@ -189,53 +187,47 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        private string insertPacket(T PacketData, string Password)
+        private bool insertPacket(T PacketData, string Id, string Password)
         {
             if(_storageType != StorageType.encrypted)
             {
                 throw new Exception("StorageType is not set to encrypted.");
             }
 
-            string PacketId = generateId();
-            string PacketPath = createPackagePath(PacketId);
+            string PacketPath = createPackagePath(Id);
 
-            PacketModel<T> PackagedData = CreatePackage(PacketId, PacketData);
+            PacketModel<T> PackagedData = CreatePackage(Id, PacketData);
 
             //Serialise Packet using Json.net
-            SerializeToFile.SerializeToFileEncryptedBson<T>(PackagedData, PacketPath, Password);
+            return SerializeToFile.SerializeToFileEncryptedBson<T>(PackagedData, PacketPath, Password);
 
-            return PacketId;
+
         }
 
-        private string insertPacket(T PacketData)
+        private bool insertPacket(T PacketData, string Id)
         {
             //Check if the database has been configured to encrypted
             if (_storageType == StorageType.encrypted)
             {
                 throw new Exception("Password required as StorageType is set to encrypted");
             }
+            string PacketPath = createPackagePath(Id);
 
-            string PacketId = generateId();
-            string PacketPath = createPackagePath(PacketId);
-
-            PacketModel<T> PackagedData = CreatePackage(PacketId, PacketData);
+            PacketModel<T> PackagedData = CreatePackage(Id, PacketData);
 
             //Serialise Packet using Json.net
             switch (_storageType)
             {
                 case StorageType.bson:
                     {
-                        SerializeToFile.SerializeToFileBson<T>(PackagedData, PacketPath);
-                        break;
+                        return SerializeToFile.SerializeToFileBson<T>(PackagedData, PacketPath);
                     }
                 default:
                     {
-                        SerializeToFile.SerializeToFileJson<T>(PackagedData, PacketPath);
-                        break;
+                        return SerializeToFile.SerializeToFileJson<T>(PackagedData, PacketPath);
                     }
             }
 
-            return PacketId;
         }
 
         /// <summary>

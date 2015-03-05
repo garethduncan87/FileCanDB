@@ -19,13 +19,7 @@ namespace Duncan.FileCanDB
         /// <returns>bool: Returns true if packet exists</returns>
         bool CheckPacketExits(string PacketId);
 
-        /// <summary>
-        /// Inserts Packet into collection.
-        /// </summary>
-        /// <typeparam name="T">Type of Packet to store in the database</typeparam>
-        /// <param name="PacketData">The Packet to store in the database</param>
-        /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        string InsertPacket(T PacketData);
+
 
         /// <summary>
         /// Inserts Packet in an encrypted form into collection.
@@ -33,8 +27,8 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        string InsertPacket(T PacketData, string Password);
-
+        bool InsertPacket(T PacketData, string Password);
+        bool InsertPacket(T PacketData, string Id, string Password);
         /// <summary>
         /// Update a packet
         /// </summary>
@@ -65,9 +59,8 @@ namespace Duncan.FileCanDB
         /// <returns>Returns true if file has been deleted</returns>
         bool DeletePacket(string PacketId);
 
-        IList<string> FindPackets(string query, int skip, int take);
-
-        IList<string> FindPacketsUsingIndex(string query);
+        string generateId();
+        IEnumerable<string> FindPacketsUsingIndex(string query, int skip, int take);
 
         /// <summary>
         /// List all packet ids in a collection
