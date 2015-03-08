@@ -37,7 +37,7 @@ namespace Duncan.FileCanDB.Tests
             TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
 
             string id = _myFileCanDb.generateId();
-            if (!_myFileCanDb.InsertPacket(MyTestObject, id, _password))
+            if (!_myFileCanDb.InsertPacket(id, MyTestObject, _password))
             {
                 Assert.Fail("No ID returned for newly inserted object");
             }
@@ -55,12 +55,12 @@ namespace Duncan.FileCanDB.Tests
             string PacketId = _myFileCanDb.generateId();
             if (_chosenStorage == StorageType.encrypted)
             {
-                _myFileCanDb.InsertPacket(MyTestObject, PacketId, _password);
+                _myFileCanDb.InsertPacket(PacketId, MyTestObject, _password);
                 
             }
             else
             {
-                _myFileCanDb.InsertPacket(MyTestObject, PacketId);
+                _myFileCanDb.InsertPacket(PacketId, MyTestObject);
             }
 
             // index file
@@ -107,14 +107,14 @@ namespace Duncan.FileCanDB.Tests
             string EntryId = _myFileCanDb.generateId();
             if (_chosenStorage == StorageType.encrypted)
             {
-                 if(!_myFileCanDb.InsertPacket(MyTestObject, EntryId, _password))
+                 if(!_myFileCanDb.InsertPacket(EntryId, MyTestObject, _password))
                  {
                      Assert.Fail("Failed to insert object");
                  }
             }
             else
             {
-                _myFileCanDb.InsertPacket(MyTestObject, EntryId);
+                _myFileCanDb.InsertPacket(EntryId, MyTestObject);
             }
 
             if (!_myFileCanDb.DeletePacket(EntryId))

@@ -117,9 +117,9 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        public bool InsertPacket(T PacketData, string Id)
+        public bool InsertPacket(string Id, T PacketData)
         {
-            return insertPacket(PacketData, Id);
+            return insertPacket(Id, PacketData);
         }
 
         /// <summary>
@@ -128,9 +128,9 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        public bool InsertPacket(T PacketData, string Id, string Password)
+        public bool InsertPacket(string Id, T PacketData, string Password)
         {
-            return insertPacket(PacketData, Id, Password);
+            return insertPacket(Id, PacketData, Password);
         }
 
         /// <summary>
@@ -139,7 +139,7 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T">Type of Packet to store in the database</typeparam>
         /// <param name="PacketData">The Packet to store in the database</param>
         /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        private bool insertPacket(T PacketData, string Id, string Password)
+        private bool insertPacket(string Id, T PacketData, string Password)
         {
             if(_storageType != StorageType.encrypted)
             {
@@ -156,7 +156,7 @@ namespace Duncan.FileCanDB
 
         }
 
-        private bool insertPacket(T PacketData, string Id)
+        private bool insertPacket(string Id, T PacketData)
         {
             //Check if the database has been configured to encrypted
             if (_storageType == StorageType.encrypted)
@@ -443,6 +443,9 @@ namespace Duncan.FileCanDB
                 PacketIds = FindPacketsUsingIndex(query, skip, take);
             }
 
+            if(PacketIds == null || PacketIds.Count() == 0)
+                return new List<PacketModel<T>>();
+
             IList<PacketModel<T>> Packets = new List<PacketModel<T>>();
             Parallel.ForEach(PacketIds, PacketId =>
             {
@@ -450,55 +453,6 @@ namespace Duncan.FileCanDB
                 Packets.Add(Packet);
             });
             return Packets;
-        }
-
-        /// <summary>
-        /// Get packet by name
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="PacketName"></param>
-        /// <param name="Area"></param>
-        /// <param name="Collection"></param>
-        /// <returns></returns>
-        public PacketModel<T> GetPacketByName(string PacketName)
-        {
-            //Get packetid from name
-            string PacketId = GetPacketId(PacketName);
-            return GetPacket(PacketId);
-        }
-
-        /// <summary>
-        /// Get encrypted packet by name
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="PacketName"></param>
-        /// <param name="Password"></param>
-        /// <returns></returns>
-        public PacketModel<T> GetPacketByName(string PacketName, string Password)
-        {
-            //Get packetid from name
-            string PacketId = GetPacketId(PacketName);
-            return GetPacket(PacketId, Password);
-        }
-
-        /// <summary>
-        /// Get Id of Packet by its name
-        /// </summary>
-        /// <param name="PacketName"></param>
-        /// <returns></returns>
-        public string GetPacketId(string PacketName)
-        {
-            PacketNameModel MyPacketName = new PacketNameModel();
-            if(Directory.Exists(_collectionPacketNamesPath))
-            {
-                var filepath = Directory.EnumerateFiles(_collectionPacketNamesPath).Where(m => m.Contains(PacketName)).FirstOrDefault();
-                PacketModel<PacketNameModel> MyPackerModel = new PacketModel<PacketNameModel>();
-
-
-                PacketModel<PacketNameModel> result = DeserializeFromFile.DeserializeFromFileJson<PacketNameModel>(filepath);
-                return result.Data.Id;
-            }
-            return null;          
         }
 
         /// <summary>
