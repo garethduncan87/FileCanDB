@@ -28,7 +28,7 @@ namespace Duncan.FileCanDB.Tests
                 _password = "12345678";
             }
 
-            _myFileCanDb = new FileCanDB<TestObject>(_databaseLocation, _area, _collection, _chosenStorage, _enableIndexing);
+            _myFileCanDb = new FileCanDB<TestObject>(_databaseLocation, _area, _collection, _chosenStorage, _enableIndexing, _password);
         }
 
         [TestMethod]
@@ -37,7 +37,7 @@ namespace Duncan.FileCanDB.Tests
             TestObject MyTestObject = new TestObject("insert option test", DateTime.Now, "insert option test " + Guid.NewGuid().ToString("N"), "insert option test");
 
             string id = _myFileCanDb.generateId();
-            if (!_myFileCanDb.InsertPacket(id, MyTestObject, _password))
+            if (!_myFileCanDb.InsertPacket(id, MyTestObject))
             {
                 Assert.Fail("No ID returned for newly inserted object");
             }
@@ -55,7 +55,7 @@ namespace Duncan.FileCanDB.Tests
             string PacketId = _myFileCanDb.generateId();
             if (_chosenStorage == StorageType.encrypted)
             {
-                _myFileCanDb.InsertPacket(PacketId, MyTestObject, _password);
+                _myFileCanDb.InsertPacket(PacketId, MyTestObject);
                 
             }
             else
@@ -75,7 +75,7 @@ namespace Duncan.FileCanDB.Tests
             PacketModel<TestObject> ReturnedObject;
             if (_chosenStorage == StorageType.encrypted)
             {
-                ReturnedObject = _myFileCanDb.GetPacket(PacketId, _password);
+                ReturnedObject = _myFileCanDb.GetPacket(PacketId);
             }
             else
             {
@@ -107,7 +107,7 @@ namespace Duncan.FileCanDB.Tests
             string EntryId = _myFileCanDb.generateId();
             if (_chosenStorage == StorageType.encrypted)
             {
-                 if(!_myFileCanDb.InsertPacket(EntryId, MyTestObject, _password))
+                 if(!_myFileCanDb.InsertPacket(EntryId, MyTestObject))
                  {
                      Assert.Fail("Failed to insert object");
                  }

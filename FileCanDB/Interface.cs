@@ -7,9 +7,7 @@ namespace Duncan.FileCanDB
 
         bool CheckPacketExits(string PacketId);
         bool InsertPacket(string Id, T PacketData);
-        bool InsertPacket(string Id, T PacketData, string Password);
         bool UpdatePacket(string PacketId, T PacketData);
-        bool UpdatePacket(string PacketId, T PacketData, string Password);
         bool DeletePacket(string PacketId);
         string generateId();
         IEnumerable<string> FindPacketsUsingIndex(string query, int skip, int take);
@@ -19,9 +17,7 @@ namespace Duncan.FileCanDB
         int CollectionPacketCount();
         int AreaCollectionsCount();
         IList<PacketModel<T>> GetPackets(int skip, int take);
-        IList<PacketModel<T>> GetPackets(int skip, int take, string Password);
         PacketModel<T> GetPacket(string PacketId);
-        PacketModel<T> GetPacket(string PacketId, string Password);
         IList<string> GetCollections();
         bool DeleteCollection();
         bool DeleteDatabase();

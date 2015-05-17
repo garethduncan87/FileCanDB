@@ -32,6 +32,7 @@ namespace Duncan.FileCanDB
         private string _collectionPath;
         private string _collectionPacketNamesPath;
         private string _collectionIndexPath;
+        private string _password;
 
         public FileCanDB(string DatabaseLocation, string Area, string Collection, StorageType StorageType, bool EnableIndexing)
         {
@@ -44,6 +45,20 @@ namespace Duncan.FileCanDB
             this._collectionPath = Path.Combine(_databaseLocation, _area, _collection);
             this._collectionPacketNamesPath = Path.Combine(_databaseLocation, _area, _collection, _packetNamesFolderName);
             this._collectionIndexPath = Path.Combine(_collectionPath, _collecitonIndexFilename);
+        }
+
+        public FileCanDB(string DatabaseLocation, string Area, string Collection, StorageType StorageType, bool EnableIndexing, string Password)
+        {
+            this._databaseLocation = DatabaseLocation;
+            this._storageType = StorageType;
+            this._enableIndexing = EnableIndexing;
+            this._area = Area;
+            this._areaPath = Path.Combine(DatabaseLocation, Area);
+            this._collection = Collection;
+            this._collectionPath = Path.Combine(_databaseLocation, _area, _collection);
+            this._collectionPacketNamesPath = Path.Combine(_databaseLocation, _area, _collection, _packetNamesFolderName);
+            this._collectionIndexPath = Path.Combine(_collectionPath, _collecitonIndexFilename);
+            this._password = Password;
         }
 
 
@@ -109,54 +124,7 @@ namespace Duncan.FileCanDB
             return PacketPath;
         }
 
-
-
-        /// <summary>
-        /// Inserts Packet into collection.
-        /// </summary>
-        /// <typeparam name="T">Type of Packet to store in the database</typeparam>
-        /// <param name="PacketData">The Packet to store in the database</param>
-        /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
         public bool InsertPacket(string Id, T PacketData)
-        {
-            return insertPacket(Id, PacketData);
-        }
-
-        /// <summary>
-        /// Inserts Packet in an encrypted form into collection.
-        /// </summary>
-        /// <typeparam name="T">Type of Packet to store in the database</typeparam>
-        /// <param name="PacketData">The Packet to store in the database</param>
-        /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        public bool InsertPacket(string Id, T PacketData, string Password)
-        {
-            return insertPacket(Id, PacketData, Password);
-        }
-
-        /// <summary>
-        /// Inserts Packet into collection. If password is provided the enum StorageMethod value will be changed to "encrypted".
-        /// </summary>
-        /// <typeparam name="T">Type of Packet to store in the database</typeparam>
-        /// <param name="PacketData">The Packet to store in the database</param>
-        /// <returns>string: Returns automaticlally generated Id of inputed packet</returns>
-        private bool insertPacket(string Id, T PacketData, string Password)
-        {
-            if(_storageType != StorageType.encrypted)
-            {
-                throw new Exception("StorageType is not set to encrypted.");
-            }
-
-            string PacketPath = createPackagePath(Id);
-
-            PacketModel<T> PackagedData = CreatePackage(Id, PacketData);
-
-            //Serialise Packet using Json.net
-            return SerializeToFile.SerializeToFileEncryptedBson<T>(PackagedData, PacketPath, Password);
-
-
-        }
-
-        private bool insertPacket(string Id, T PacketData)
         {
             //Check if the database has been configured to encrypted
             if (_storageType == StorageType.encrypted)
@@ -174,6 +142,10 @@ namespace Duncan.FileCanDB
                     {
                         return SerializeToFile.SerializeToFileBson<T>(PackagedData, PacketPath);
                     }
+                case StorageType.encrypted:
+                        {
+                            return SerializeToFile.SerializeToFileEncryptedBson<T>(PackagedData, PacketPath, _password);
+                        }
                 default:
                     {
                         return SerializeToFile.SerializeToFileJson<T>(PackagedData, PacketPath);
@@ -182,34 +154,7 @@ namespace Duncan.FileCanDB
 
         }
 
-        /// <summary>
-        /// Update a packet
-        /// </summary>
-        /// <typeparam name="T">Packet data type</typeparam>
-        /// <param name="PacketId">Packet Id</param>
-        /// <param name="PacketData">Packet Data</param>
-        /// <param name="KeyWords">Packet keywords</param>
-        /// <returns></returns>
         public bool UpdatePacket(string PacketId, T PacketData)
-        {
-            return updatePacket(PacketId, PacketData);
-        }
-
-        /// <summary>
-        /// Update an encrypted packet
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="PacketId"></param>
-        /// <param name="PacketData"></param>
-        /// <param name="Password"></param>
-        /// <param name="KeyWords"></param>
-        /// <returns></returns>
-        public bool UpdatePacket(string PacketId, T PacketData, string Password)
-        {
-            return updatePacket(PacketId, PacketData, Password);
-        }
-
-        private bool updatePacket(string PacketId, T PacketData, string Password = "")
         {
             // deserialize product from BSON
             if (Directory.Exists(_collectionPath))
@@ -230,7 +175,7 @@ namespace Duncan.FileCanDB
                     if (_storageType == StorageType.encrypted)
                     {
                         //bson encrypted method
-                        SerializeToFile.SerializeToFileEncryptedBson<T>(MyPacket, PacketPath, Password);
+                        SerializeToFile.SerializeToFileEncryptedBson<T>(MyPacket, PacketPath, _password);
                     }
                     else if (_storageType == StorageType.bson)
                     {
@@ -243,7 +188,6 @@ namespace Duncan.FileCanDB
                         SerializeToFile.SerializeToFileJson<T>(MyPacket, PacketPath);
                     }
                 }
-
             }
             return true;
         }
@@ -396,20 +340,7 @@ namespace Duncan.FileCanDB
         }
 
         /// <summary>
-        /// Gets all packets in a databases collection based on a query provided
-        /// If password provided, only files with the same password will be returned.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="Password"></param>
-        /// <returns>List: Returns a list of packet</returns>
-        public IList<PacketModel<T>> GetPackets(string query, int skip, int take, string Password)
-        {
-            return getPackets(null, skip, take, Password);
-        }
-
-        /// <summary>
         /// Gets all packets in a databases collection. Optionl password parameter. Parallel method.
-        /// If password provided, only files with the same password will be returned.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="Password"></param>
@@ -419,19 +350,7 @@ namespace Duncan.FileCanDB
             return getPackets(null, skip, take);
         }
 
-        /// <summary>
-        /// Gets all encrypted packets in a databases collection. Optionl password parameter. Parallel method.
-        /// If password provided, only files with the same password will be returned.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="Password"></param>
-        /// <returns></returns>
-        public IList<PacketModel<T>> GetPackets(int skip, int take, string Password)
-        {
-            return getPackets(null, skip, take, Password);
-        }
-
-        private IList<PacketModel<T>> getPackets(string query, int skip, int take, string Password = "")
+        private IList<PacketModel<T>> getPackets(string query, int skip, int take)
         {
             IEnumerable<string> PacketIds;
             if(string.IsNullOrEmpty(query))
@@ -449,7 +368,7 @@ namespace Duncan.FileCanDB
             IList<PacketModel<T>> Packets = new List<PacketModel<T>>();
             Parallel.ForEach(PacketIds, PacketId =>
             {
-                var Packet = GetPacket(PacketId, Password);
+                var Packet = GetPacket(PacketId);
                 Packets.Add(Packet);
             });
             return Packets;
@@ -466,19 +385,8 @@ namespace Duncan.FileCanDB
             return _getPacket(PacketId);
         }
 
-        /// <summary>
-        /// Get an packet from the database. If the Password is provided, the enum StorageMethod value will changed to "encrypted"
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="PacketId">Packet ID</param>
-        /// <param name="Password">Optional password parametert to enable encryption</param>
-        /// <returns>Packet stored in database</returns>
-        public PacketModel<T> GetPacket(string PacketId, string Password)
-        {
-            return _getPacket(PacketId, Password);
-        }
 
-        private PacketModel<T> _getPacket(string PacketId, string Password = "")
+        private PacketModel<T> _getPacket(string PacketId)
         {
             string PacketFilePath = Path.Combine(_collectionPath, PacketId + "." + _storageType);
 
@@ -488,7 +396,7 @@ namespace Duncan.FileCanDB
                 if (_storageType == StorageType.encrypted)
                 {
                     //bson encrypted method
-                    return DeserializeFromFile.DeserializeFromFileBsonEncrypted<T>(PacketFilePath, Password);
+                    return DeserializeFromFile.DeserializeFromFileBsonEncrypted<T>(PacketFilePath, _password);
                 }
                 else if (_storageType == StorageType.bson)
                 {
