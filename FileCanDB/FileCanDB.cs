@@ -36,6 +36,9 @@ namespace Duncan.FileCanDB
 
         public FileCanDB(string DatabaseLocation, string Area, string Collection, StorageType StorageType, bool EnableIndexing)
         {
+            if (StorageType == StorageType.encrypted)
+                throw new Exception("Password required when setting StorageType to encrypted");
+            
             this._databaseLocation = DatabaseLocation;
             this._storageType = StorageType;
             this._enableIndexing = EnableIndexing;
@@ -45,12 +48,13 @@ namespace Duncan.FileCanDB
             this._collectionPath = Path.Combine(_databaseLocation, _area, _collection);
             this._collectionPacketNamesPath = Path.Combine(_databaseLocation, _area, _collection, _packetNamesFolderName);
             this._collectionIndexPath = Path.Combine(_collectionPath, _collecitonIndexFilename);
+
         }
 
-        public FileCanDB(string DatabaseLocation, string Area, string Collection, StorageType StorageType, bool EnableIndexing, string Password)
+        public FileCanDB(string DatabaseLocation, string Area, string Collection, bool EnableIndexing, string Password)
         {
             this._databaseLocation = DatabaseLocation;
-            this._storageType = StorageType;
+            this._storageType = StorageType.encrypted;
             this._enableIndexing = EnableIndexing;
             this._area = Area;
             this._areaPath = Path.Combine(DatabaseLocation, Area);
@@ -126,13 +130,7 @@ namespace Duncan.FileCanDB
 
         public bool InsertPacket(string Id, T PacketData)
         {
-            //Check if the database has been configured to encrypted
-            if (_storageType == StorageType.encrypted)
-            {
-                throw new Exception("Password required as StorageType is set to encrypted");
-            }
             string PacketPath = createPackagePath(Id);
-
             PacketModel<T> PackagedData = CreatePackage(Id, PacketData);
 
             //Serialise Packet using Json.net

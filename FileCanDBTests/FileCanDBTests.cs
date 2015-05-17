@@ -28,7 +28,7 @@ namespace Duncan.FileCanDB.Tests
                 _password = "12345678";
             }
 
-            _myFileCanDb = new FileCanDB<TestObject>(_databaseLocation, _area, _collection, _chosenStorage, _enableIndexing, _password);
+            _myFileCanDb = new FileCanDB<TestObject>(_databaseLocation, _area, _collection, _enableIndexing, _password);
         }
 
         [TestMethod]
