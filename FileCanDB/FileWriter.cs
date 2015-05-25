@@ -14,11 +14,11 @@ namespace Duncan.FileCanDB
 {
     
 
-    public static class SerializeToFile
+    public static class FileWriter
     {
         private const string EncryptedDetailsFileExtension = ".details";
 
-        public static bool SerializeToFileEncryptedBson<T>(PacketModel<T> PacketData, string FilePath, string Password)
+        public static bool WriteEncryptedBson<T>(PacketModel<T> PacketData, string FilePath, string Password)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -41,7 +41,7 @@ namespace Duncan.FileCanDB
                         ms.Position = 0;
                         byte[] Salt = Encoding.UTF8.GetBytes(Encryption.GetSalt(50));
                         byte[] PasswordByte = Encoding.UTF8.GetBytes(Encryption.GetHash(Password, Salt));
-                        byte[] EncryptedData = Encryption.AES_Encrypt(ms.ToArray(), PasswordByte, Salt);
+                        byte[] EncryptedData = Encryption.EncryptBytes(ms.ToArray(), PasswordByte, Salt);
 
                         EncryptedDetails MyEncryptionDetails = new EncryptedDetails();
                         MyEncryptionDetails.salt = Salt;
@@ -51,7 +51,7 @@ namespace Duncan.FileCanDB
                         
 
                         //Store encryption details in a new file with same name with .s as extension
-                        SerializeToFileBson<EncryptedDetails>(MyPacket, FilePath + EncryptedDetailsFileExtension);
+                        WriteBson<EncryptedDetails>(MyPacket, FilePath + EncryptedDetailsFileExtension);
 
                         using (MemoryStream ems = new MemoryStream(EncryptedData))
                         {
@@ -70,7 +70,7 @@ namespace Duncan.FileCanDB
             }
         }
 
-        public static bool SerializeToFileBson<T>(PacketModel<T> PacketData, string FilePath)
+        public static bool WriteBson<T>(PacketModel<T> PacketData, string FilePath)
         {
             using (MemoryStream ms = new MemoryStream())
             {
@@ -105,7 +105,7 @@ namespace Duncan.FileCanDB
             }
         }
 
-        public static bool SerializeToFileJson<T>(PacketModel<T> PacketData, string FilePath)
+        public static bool WriteJson<T>(PacketModel<T> PacketData, string FilePath)
         {
             try
             {
@@ -126,9 +126,8 @@ namespace Duncan.FileCanDB
 
                 //Finally delete the old file
                 if (RequiredToDelete)
-                {
                     File.Delete(FilePath + ".delete");
-                }
+
                 return true;
             }
             catch

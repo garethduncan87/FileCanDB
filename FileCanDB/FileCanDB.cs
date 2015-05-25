@@ -18,7 +18,7 @@ namespace Duncan.FileCanDB
         encrypted
     };
 
-    public class FileCanDB<T> : IFileCanDB<T>
+    public class FileCanDB<T>
     {
         private const string _encryptedDetailsFileExtension = ".details";
         private const string _collecitonIndexFilename = "index.txt";
@@ -34,43 +34,39 @@ namespace Duncan.FileCanDB
         private string _collectionIndexPath;
         private string _password;
 
-        public FileCanDB(string DatabaseLocation, string Area, string Collection, StorageType StorageType, bool EnableIndexing)
+        public FileCanDB(string DatabaseLocation, string Area, string Collection, bool EnableIndexing, StorageType StorageType)
         {
-            if (StorageType == StorageType.encrypted)
-                throw new Exception("Password required when setting StorageType to encrypted");
-            
-            this._databaseLocation = DatabaseLocation;
-            this._storageType = StorageType;
-            this._enableIndexing = EnableIndexing;
-            this._area = Area;
-            this._areaPath = Path.Combine(DatabaseLocation, Area);
-            this._collection = Collection;
-            this._collectionPath = Path.Combine(_databaseLocation, _area, _collection);
-            this._collectionPacketNamesPath = Path.Combine(_databaseLocation, _area, _collection, _packetNamesFolderName);
-            this._collectionIndexPath = Path.Combine(_collectionPath, _collecitonIndexFilename);
-
+            Initialise(DatabaseLocation, Area, Collection, EnableIndexing, StorageType, string.Empty);
         }
 
         public FileCanDB(string DatabaseLocation, string Area, string Collection, bool EnableIndexing, string Password)
         {
+            Initialise(DatabaseLocation, Area, Collection, EnableIndexing, StorageType.encrypted, Password);
+        }
+
+        private void Initialise(string DatabaseLocation, string Area, string Collection, bool EnableIndexing, StorageType StorageType, string Password)
+        {
+            if (StorageType == StorageType.encrypted && string.IsNullOrEmpty(Password))
+                throw new Exception("Password required when setting StorageType to encrypted");
+
             this._databaseLocation = DatabaseLocation;
-            this._storageType = StorageType.encrypted;
-            this._enableIndexing = EnableIndexing;
             this._area = Area;
-            this._areaPath = Path.Combine(DatabaseLocation, Area);
             this._collection = Collection;
+            this._enableIndexing = EnableIndexing;
+            this._storageType = StorageType;
+            this._password = Password;
+
+            this._areaPath = Path.Combine(DatabaseLocation, Area);
             this._collectionPath = Path.Combine(_databaseLocation, _area, _collection);
             this._collectionPacketNamesPath = Path.Combine(_databaseLocation, _area, _collection, _packetNamesFolderName);
             this._collectionIndexPath = Path.Combine(_collectionPath, _collecitonIndexFilename);
-            this._password = Password;
         }
-
 
         /// <summary>
         /// Generate an Id that uses DateTime Ticks and a Guid number
         /// </summary>
         /// <returns></returns>
-        public string generateId()
+        public string CreateId()
         {
             return DateTime.Now.Ticks.ToString() + "-" + Guid.NewGuid().ToString("N");
         }
@@ -80,15 +76,13 @@ namespace Duncan.FileCanDB
         /// </summary>
         /// <param name="PacketId">Packet Id</param>
         /// <returns>bool: Returns true if packet exists</returns>
-        public bool CheckPacketExits(string PacketId)
+        public bool Exists(string PacketId)
         {
             if (!Directory.Exists(_collectionPath))
             {
                 string PacketPath = Path.Combine(_collectionPath, PacketId + "." + _storageType);
                 if(File.Exists(PacketPath))
-                {
                     return true;
-                }
             }
             return false;
         }
@@ -102,7 +96,7 @@ namespace Duncan.FileCanDB
         /// <returns>PacketModel: Returns a package containing the packet data provided</returns>
         private PacketModel<T> CreatePackage(string PacketId, T Data)
         {
-             //PacketWrapper
+            //PacketWrapper
             PacketModel<T> MyPacket = new PacketModel<T>();
             MyPacket.Created = DateTime.Now;
             MyPacket.Data = Data;
@@ -115,20 +109,18 @@ namespace Duncan.FileCanDB
         {
             //Create file name. Use datetime tick so easier to sort files by time created, then append guid to prevent any duplicates
             if (!Directory.Exists(_collectionPath))
-            {
                 Directory.CreateDirectory(_collectionPath);
-            }
+
             string PacketPath;
             //Check if file already exists 
             PacketPath = Path.Combine(_collectionPath, PacketId + "." + _storageType);
             if (File.Exists(PacketPath))
-            {
                 throw new Exception("Packet already exists. Either delete first or use UpdatePacket");
-            }
+           
             return PacketPath;
         }
 
-        public bool InsertPacket(string Id, T PacketData)
+        public bool Insert(string Id, T PacketData)
         {
             string PacketPath = createPackagePath(Id);
             PacketModel<T> PackagedData = CreatePackage(Id, PacketData);
@@ -138,21 +130,21 @@ namespace Duncan.FileCanDB
             {
                 case StorageType.bson:
                     {
-                        return SerializeToFile.SerializeToFileBson<T>(PackagedData, PacketPath);
+                        return FileWriter.WriteBson<T>(PackagedData, PacketPath);
                     }
                 case StorageType.encrypted:
                         {
-                            return SerializeToFile.SerializeToFileEncryptedBson<T>(PackagedData, PacketPath, _password);
+                            return FileWriter.WriteEncryptedBson<T>(PackagedData, PacketPath, _password);
                         }
                 default:
                     {
-                        return SerializeToFile.SerializeToFileJson<T>(PackagedData, PacketPath);
+                        return FileWriter.WriteJson<T>(PackagedData, PacketPath);
                     }
             }
 
         }
 
-        public bool UpdatePacket(string PacketId, T PacketData)
+        public bool Update(string PacketId, T PacketData)
         {
             // deserialize product from BSON
             if (Directory.Exists(_collectionPath))
@@ -173,17 +165,17 @@ namespace Duncan.FileCanDB
                     if (_storageType == StorageType.encrypted)
                     {
                         //bson encrypted method
-                        SerializeToFile.SerializeToFileEncryptedBson<T>(MyPacket, PacketPath, _password);
+                        FileWriter.WriteEncryptedBson<T>(MyPacket, PacketPath, _password);
                     }
                     else if (_storageType == StorageType.bson)
                     {
                         //return bson
-                        SerializeToFile.SerializeToFileBson<T>(MyPacket, PacketPath);
+                        FileWriter.WriteBson<T>(MyPacket, PacketPath);
                     }
                     else
                     {
                         //return json
-                        SerializeToFile.SerializeToFileJson<T>(MyPacket, PacketPath);
+                        FileWriter.WriteJson<T>(MyPacket, PacketPath);
                     }
                 }
             }
@@ -197,7 +189,7 @@ namespace Duncan.FileCanDB
         /// <param name="Area">Database ID</param>
         /// <param name="Collection">Collection ID</param>
         /// <returns>Returns true if file has been deleted</returns>
-        public bool DeletePacket(string PacketId)
+        public bool Delete(string PacketId)
         {
             bool FileDeleted = false;
             if (Directory.Exists(_collectionPath))
@@ -225,7 +217,7 @@ namespace Duncan.FileCanDB
                     //Delete packet from index file
                     if (_enableIndexing)
                     {
-                        DeletePacketIndex(PacketId);
+                        DeleteIndexEntry(PacketId);
                     }
 
                     //Check how many files left in directory. if 0, delete directory.
@@ -239,7 +231,7 @@ namespace Duncan.FileCanDB
             return FileDeleted;
         }
 
-        public IEnumerable<string> FindPacketsUsingIndex(string query, int skip, int take)
+        public IEnumerable<string> Find(string query, int skip, int take)
         {
             IList<string> searchwords = query.Split(' ');
             List<string> PacketIdsFound = new List<string>();
@@ -271,37 +263,36 @@ namespace Duncan.FileCanDB
         /// List all packet ids in a collection
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<string> ListPackets()
+        public IEnumerable<string> List()
         {
-            return listPackets();
+            return list();
         }
 
         /// <summary>
         /// List all packet ids in a collection
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<string> ListPackets(int skip)
+        public IEnumerable<string> List(int skip)
         {
-            return listPackets(skip);
+            return list(skip);
         }
 
         /// <summary>
         /// List all packet ids in a collection
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<string> ListPackets(int skip, int take)
+        public IEnumerable<string> List(int skip, int take)
         {
-            return listPackets(skip, take);
+            return list(skip, take);
         }
 
-        private IEnumerable<string> listPackets(int skip = 0, int take = 0)
+        private IEnumerable<string> list(int skip = 0, int take = 0)
         {
             if (Directory.Exists(_collectionPath))
             {
                 if (take != 0)
-                {
                     return Directory.GetFiles(_collectionPath, "*." + _storageType, SearchOption.AllDirectories).Skip(skip).Take(take).Select(x => Path.GetFileNameWithoutExtension(x));
-                }
+
                 return Directory.GetFiles(_collectionPath, "*." + _storageType, SearchOption.AllDirectories).Skip(skip).Select(x => Path.GetFileNameWithoutExtension(x));
             }
             return null;
@@ -310,18 +301,16 @@ namespace Duncan.FileCanDB
         public int CollectionPacketCount()
         {
             if (Directory.Exists(_collectionPath))
-            {
                 return Directory.GetFiles(_collectionPath, "*." + _storageType, SearchOption.AllDirectories).Count();
-            }
+
             return 0;
         }
 
         public int AreaCollectionsCount()
         {
             if (Directory.Exists(_areaPath))
-            {
                 return Directory.GetDirectories(_areaPath).Count();
-            }
+
             return 0;
         }
 
@@ -332,9 +321,9 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T"></typeparam>
         /// <param name="Password"></param>
         /// <returns>List: Returns a list of packet</returns>
-        public IList<PacketModel<T>> GetPackets(string query, int skip, int take)
+        public IList<PacketModel<T>> ReadList(string query, int skip, int take)
         {
-            return getPackets(null, skip, take);
+            return readList(null, skip, take);
         }
 
         /// <summary>
@@ -343,22 +332,18 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T"></typeparam>
         /// <param name="Password"></param>
         /// <returns></returns>
-        public IList<PacketModel<T>> GetPackets(int skip, int take)
+        public IList<PacketModel<T>> ReadList(int skip, int take)
         {
-            return getPackets(null, skip, take);
+            return readList(null, skip, take);
         }
 
-        private IList<PacketModel<T>> getPackets(string query, int skip, int take)
+        private IList<PacketModel<T>> readList(string query, int skip, int take)
         {
             IEnumerable<string> PacketIds;
             if(string.IsNullOrEmpty(query))
-            {
-                PacketIds = ListPackets(skip, take);
-            }
+                PacketIds = List(skip, take);
             else
-            {
-                PacketIds = FindPacketsUsingIndex(query, skip, take);
-            }
+                PacketIds = Find(query, skip, take);
 
             if(PacketIds == null || PacketIds.Count() == 0)
                 return new List<PacketModel<T>>();
@@ -366,7 +351,7 @@ namespace Duncan.FileCanDB
             IList<PacketModel<T>> Packets = new List<PacketModel<T>>();
             Parallel.ForEach(PacketIds, PacketId =>
             {
-                var Packet = GetPacket(PacketId);
+                var Packet = Read(PacketId);
                 Packets.Add(Packet);
             });
             return Packets;
@@ -378,13 +363,13 @@ namespace Duncan.FileCanDB
         /// <typeparam name="T"></typeparam>
         /// <param name="PacketId">Packet ID</param>
         /// <returns>Packet stored in database</returns>
-        public PacketModel<T> GetPacket(string PacketId)
+        public PacketModel<T> Read(string PacketId)
         {
-            return _getPacket(PacketId);
+            return read(PacketId);
         }
 
 
-        private PacketModel<T> _getPacket(string PacketId)
+        private PacketModel<T> read(string PacketId)
         {
             string PacketFilePath = Path.Combine(_collectionPath, PacketId + "." + _storageType);
 
@@ -394,17 +379,17 @@ namespace Duncan.FileCanDB
                 if (_storageType == StorageType.encrypted)
                 {
                     //bson encrypted method
-                    return DeserializeFromFile.DeserializeFromFileBsonEncrypted<T>(PacketFilePath, _password);
+                    return FileReader.ReadEncryptedBson<T>(PacketFilePath, _password);
                 }
                 else if (_storageType == StorageType.bson)
                 {
                     //return bson
-                    return DeserializeFromFile.DeserializeFromFileBson<T>(PacketFilePath);
+                    return FileReader.ReadBson<T>(PacketFilePath);
                 }
                 else
                 {
                     //return json
-                    return DeserializeFromFile.DeserializeFromFileJson<T>(PacketFilePath);
+                    return FileReader.ReadJson<T>(PacketFilePath);
                 }
             }
             return default(PacketModel<T>);
@@ -417,14 +402,12 @@ namespace Duncan.FileCanDB
         /// </summary>
         /// <param name="Area"></param>
         /// <returns>An IList of string</returns>
-        public IList<string> GetCollections()
+        public IList<string> ListCollections()
         {
             if (Directory.Exists(_areaPath))
-            {
                 return Directory.GetDirectories(_areaPath).Select(m => m.Substring(m.LastIndexOf('\\') + 1)).ToList();
-            }
+
             return null;
-            
         }
 
         /// <summary>
@@ -436,13 +419,11 @@ namespace Duncan.FileCanDB
         public bool DeleteCollection()
         {
             if(Directory.Exists(_collectionPath))
-            {
                 Directory.Delete(_collectionPath, true);
-            }
+
             if (Directory.Exists(_collectionPath))
-            {
                 return false;
-            }
+
             return true;
         }
 
@@ -455,13 +436,12 @@ namespace Duncan.FileCanDB
         {
             Directory.Delete(_areaPath, true);
             if (Directory.Exists(_areaPath))
-            {
                 return false;
-            }
+
             return true;
         }
 
-        public void IndexPacket(string PacketId, List<string> KeyWords)
+        public void AddIndexEntry(string PacketId, List<string> KeyWords)
         {
             if (!File.Exists(_collectionIndexPath))
             {
@@ -473,83 +453,87 @@ namespace Duncan.FileCanDB
 
             string tempFile = Path.GetTempFileName();
             using (var sr = new StreamReader(_collectionIndexPath))
-            using (var sw = new StreamWriter(tempFile))
             {
-                string line;
-                bool indexadded = false;
-                while ((line = sr.ReadLine()) != null)
+                using (var sw = new StreamWriter(tempFile))
                 {
-
-                    string keyword = line.Split(' ')[0];
-                    if (KeyWords.Contains(keyword))
+                    string line;
+                    bool indexadded = false;
+                    while ((line = sr.ReadLine()) != null)
                     {
-                        //line found
-                        string PacketIds = line.Split(' ')[1];
-                        List<string> PacketIdsList = PacketIds.Split(',').ToList();
-                        if (PacketIdsList.Contains(PacketId))
+
+                        string keyword = line.Split(' ')[0];
+                        if (KeyWords.Contains(keyword))
                         {
-                            //Write line
-                            sw.WriteLine(line);
+                            //line found
+                            string PacketIds = line.Split(' ')[1];
+                            List<string> PacketIdsList = PacketIds.Split(',').ToList();
+                            if (PacketIdsList.Contains(PacketId))
+                            {
+                                //Write line
+                                sw.WriteLine(line);
+                            }
+                            else
+                            {
+                                //Add to list
+                                PacketIdsList.Add(PacketId);
+                                sw.WriteLine(keyword + " " + string.Join(",", new List<string>(PacketIdsList).ToArray()));
+                            }
+                            indexadded = true;
                         }
                         else
                         {
-                            //Add to list
-                            PacketIdsList.Add(PacketId);
-                            sw.WriteLine(keyword + " " + string.Join(",", new List<string>(PacketIdsList).ToArray()));
+                            sw.WriteLine(line);
                         }
-                        indexadded = true;
-                    }
-                    else
-                    {
-                        sw.WriteLine(line);
-                    }
-                }
-
-                if (sr.ReadLine() != null || indexadded == false)
-                {
-                    //file is empty so add to index
-                    //for each keyword add record
-                    foreach (string keyword in KeyWords)
-                    {
-                        sw.WriteLine(keyword + " " + PacketId);
                     }
 
+                    if (sr.ReadLine() != null || indexadded == false)
+                    {
+                        //file is empty so add to index
+                        //for each keyword add record
+                        foreach (string keyword in KeyWords)
+                        {
+                            sw.WriteLine(keyword + " " + PacketId);
+                        }
+
+                    }
                 }
             }
+
 
             File.Delete(_collectionIndexPath);
             File.Move(tempFile, _collectionIndexPath);
         }
 
-        public void DeletePacketIndex(string PacketId)
+        public void DeleteIndexEntry(string PacketId)
         {
             if (File.Exists(_collectionIndexPath))
             {
                 string tempFile = Path.GetTempFileName();
                 using (var sr = new StreamReader(_collectionIndexPath))
-                using (var sw = new StreamWriter(tempFile))
                 {
-                    string line;
-                    while ((line = sr.ReadLine()) != null)
+                    using (var sw = new StreamWriter(tempFile))
                     {
-                        if (line.Contains(PacketId))
+                        string line;
+                        while ((line = sr.ReadLine()) != null)
                         {
-                            //Remove Packetid from list and re create the line
-                            string keyword = line.Split(' ')[0];
-                            string PacketIds = line.Split(' ')[1];
-                            List<string> PacketIdsList = PacketIds.Split(',').ToList();
-                            PacketIdsList.Remove(PacketId);
-
-                            //If there are Packets in the list, then right the line to the index file
-                            if (PacketIdsList.Count > 0)
+                            if (line.Contains(PacketId))
                             {
-                                sw.WriteLine(keyword + " " + string.Join(",", new List<string>(PacketIdsList).ToArray()));
+                                //Remove Packetid from list and re create the line
+                                string keyword = line.Split(' ')[0];
+                                string PacketIds = line.Split(' ')[1];
+                                List<string> PacketIdsList = PacketIds.Split(',').ToList();
+                                PacketIdsList.Remove(PacketId);
+
+                                //If there are Packets in the list, then right the line to the index file
+                                if (PacketIdsList.Count > 0)
+                                    sw.WriteLine(keyword + " " + string.Join(",", new List<string>(PacketIdsList).ToArray()));
+
                             }
-                        }
-                        else
-                        {
-                            //If the line does not contain the Packet id, then write the line back to the index file
-                            sw.WriteLine(line);
+                            else
+                            {
+                                //If the line does not contain the Packet id, then write the line back to the index file
+                                sw.WriteLine(line);
+                            }
                         }
                     }
                 }
@@ -559,9 +543,8 @@ namespace Duncan.FileCanDB
 
                 //recreate the new index file
                 if (File.ReadLines(tempFile).Count() > 0)
-                {
                     File.Move(tempFile, _collectionIndexPath);
-                }
+
             }
 
         }

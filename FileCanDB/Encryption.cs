@@ -36,7 +36,7 @@ namespace Duncan.FileCanDB
             return Convert.ToBase64String(salt) + Convert.ToBase64String(hash);
         }
 
-        public static byte[] AES_Encrypt(byte[] bytesToBeEncrypted, byte[] passwordBytes, byte[] saltBytes)
+        public static byte[] EncryptBytes(byte[] bytesToBeEncrypted, byte[] passwordBytes, byte[] saltBytes)
         {
             byte[] encryptedBytes = null;
             using (MemoryStream ms = new MemoryStream())
@@ -64,7 +64,7 @@ namespace Duncan.FileCanDB
             return encryptedBytes;
         }
 
-        public static byte[] AES_Decrypt(byte[] bytesToBeDecrypted, byte[] passwordBytes,  byte[] saltBytes)
+        public static byte[] DecryptBytes(byte[] bytesToBeDecrypted, byte[] passwordBytes,  byte[] saltBytes)
         {
             byte[] decryptedBytes = null;
 
