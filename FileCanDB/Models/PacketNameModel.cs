@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Duncan.FileCanDB.Models
+﻿namespace Duncan.FileCanDB.Models
 {
     public class PacketNameModel
     {
