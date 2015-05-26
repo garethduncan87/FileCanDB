@@ -49,6 +49,12 @@ namespace Duncan.FileCanDB
             if (StorageType == StorageType.encrypted && string.IsNullOrEmpty(Password))
                 throw new Exception("Password required when setting StorageType to encrypted");
 
+            if (string.IsNullOrEmpty(Area))
+                throw new Exception("Area name must be provided");
+
+            if (string.IsNullOrEmpty(Collection))
+                throw new Exception("Collection name must be provided");
+
             this._databaseLocation = DatabaseLocation;
             this._area = Area;
             this._collection = Collection;
