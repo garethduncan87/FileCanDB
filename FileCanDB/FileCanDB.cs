@@ -296,10 +296,11 @@ namespace Duncan.FileCanDB
         {
             if (Directory.Exists(_collectionPath))
             {
+                var result = Directory.GetFiles(_collectionPath, "*." + _storageType, SearchOption.AllDirectories).Select(x => Path.GetFileNameWithoutExtension(x)).Skip(skip);
                 if (take != 0)
-                    return Directory.GetFiles(_collectionPath, "*." + _storageType, SearchOption.AllDirectories).Skip(skip).Take(take).Select(x => Path.GetFileNameWithoutExtension(x));
+                    result = result.Take(take);
 
-                return Directory.GetFiles(_collectionPath, "*." + _storageType, SearchOption.AllDirectories).Skip(skip).Select(x => Path.GetFileNameWithoutExtension(x));
+                return result;
             }
             return null;
         }
