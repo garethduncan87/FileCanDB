@@ -7,7 +7,7 @@
     <ProjectGuid>{00A51492-1EBF-4AB7-A4F3-5958E6204423}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Duncan.FileCanDB</RootNamespace>
+    <RootNamespace>FileCanDB</RootNamespace>
     <AssemblyName>FileCanDB</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

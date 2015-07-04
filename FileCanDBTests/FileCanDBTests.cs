@@ -1,11 +1,10 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Duncan.FileCanDB;
 using System.Collections.Generic;
-using Duncan.FileCanDB.Models;
+using FileCanDB.Models;
 
 
-namespace Duncan.FileCanDB.Tests
+namespace FileCanDB.Tests
 {
     [TestClass]
     public class FileCanDBTests

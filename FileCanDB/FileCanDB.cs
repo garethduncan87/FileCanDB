@@ -1,15 +1,12 @@
-﻿using Duncan.FileCanDB.Models;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Bson;
+﻿using FileCanDB.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 
-namespace Duncan.FileCanDB
+namespace FileCanDB
 {
     public enum StorageType
     {

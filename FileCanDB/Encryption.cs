@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Configuration;
 using System.IO;
 using System.Security.Cryptography;
-using System.Text;
 
-namespace Duncan.FileCanDB
+namespace FileCanDB
 {
     public class EncryptedDetails
     {

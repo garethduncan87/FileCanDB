@@ -1,4 +1,4 @@
-﻿namespace Duncan.FileCanDB.Models
+﻿namespace FileCanDB.Models
 {
     public class PacketNameModel
     {
